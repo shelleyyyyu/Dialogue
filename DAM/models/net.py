@@ -162,9 +162,9 @@ class Net(object):
             sim = tf.stack(sim_turns, axis=1)
             print('sim shape: %s' %sim.shape)
             with tf.variable_scope('cnn_aggregation'):
-                final_info = layers.CNN_3d(sim, 32, 16)
+                #final_info = layers.CNN_3d(sim, 32, 16)
                 #for douban
-                #final_info = layers.CNN_3d(sim, 16, 16)
+                final_info = layers.CNN_3d(sim, 16, 16)
 
             #loss and train
             with tf.variable_scope('loss'):
