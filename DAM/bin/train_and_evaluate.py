@@ -109,11 +109,11 @@ def train(conf, _model):
                             _model.label: val_batches["label"][batch_index]
                         }   
                 
-                        scores = sess.run(_model.logits, feed_dict = feed)
-                    
+                        scores, y_pred = sess.run([_model.logits, _model.y_pred], feed_dict = feed)
+
                         for i in xrange(conf["batch_size"]):
                             score_file.write(
-                                str(scores[i]) + '\t' + 
+                                str(y_pred[i][-1]) + '\t' +
                                 str(val_batches["label"][batch_index][i]) + '\n')
                     score_file.close()
 

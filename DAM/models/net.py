@@ -168,7 +168,7 @@ class Net(object):
 
             #loss and train
             with tf.variable_scope('loss'):
-                self.loss, self.logits = layers.loss(final_info, self.label)
+                self.loss, self.logits, self.y_pred = layers.loss(final_info, self.label)
 
                 self.global_step = tf.Variable(0, trainable=False)
                 initial_learning_rate = self._conf['learning_rate']

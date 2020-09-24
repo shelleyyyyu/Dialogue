@@ -88,20 +88,30 @@ def loss(x, y, num_classes=2, is_clip=True, clip_value=10):
 
     W = tf.get_variable(
         name='weights',
-        shape=[x.shape[-1], num_classes-1],
+        shape=[x.shape[-1], num_classes],
         initializer=tf.orthogonal_initializer())
     bias = tf.get_variable(
         name='bias',
-        shape=[num_classes-1],
+        shape=[num_classes],
         initializer=tf.zeros_initializer())
 
-    logits = tf.reshape(tf.matmul(x, W) + bias, [-1])
-    loss = tf.nn.sigmoid_cross_entropy_with_logits(
-        labels=tf.cast(y, tf.float32),
-        logits=logits)
-    loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
+    #print(x.shape)
+    #print(W.shape)
+    #print(bias.shape)
 
-    return loss, logits
+    logits = tf.matmul(x, W) + bias
+    #print(logits.shape)
+    #print('-'*100)
+    #loss = tf.nn.sigmoid_cross_entropy_with_logits(
+    #    labels=tf.cast(y, tf.float32),
+    #    logits=logits)
+    #loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
+
+    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(y, tf.int32), logits=logits)
+    loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
+    y_pred = tf.nn.softmax(logits)
+
+    return loss, logits, y_pred
 
 def attention(
     Q, K, V, 
