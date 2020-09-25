@@ -58,16 +58,14 @@ def test(conf, _model):
                 _model.response: test_batches["response"][batch_index],
                 _model.response_len: test_batches["response_len"][batch_index],
                 _model.label: test_batches["label"][batch_index]
-                }   
-                
-            scores = sess.run(_model.logits, feed_dict = feed)
-                    
+                }
+
+            scores, y_pred = sess.run([_model.logits, _model.y_pred], feed_dict=feed)
+
             for i in xrange(conf["batch_size"]):
                 score_file.write(
-                    str(scores[i]) + '\t' + 
-                    str(test_batches["label"][batch_index][i]) + '\n')
-                    #str(sum(test_batches["every_turn_len"][batch_index][i]) / test_batches['tt_turns_len'][batch_index][i]) + '\t' +
-                    #str(test_batches['tt_turns_len'][batch_index][i]) + '\n') 
+                    str(y_pred[i][-1]) + '\t' +
+                    str(val_batches["label"][batch_index][i]) + '\n')
 
         score_file.close()
         print('finish test')
