@@ -65,7 +65,7 @@ def test(conf, _model):
             for i in xrange(conf["batch_size"]):
                 score_file.write(
                     str(y_pred[i][-1]) + '\t' +
-                    str(val_batches["label"][batch_index][i]) + '\n')
+                    str(test_batches["label"][batch_index][i]) + '\n')
 
         score_file.close()
         print('finish test')
