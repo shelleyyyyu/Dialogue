@@ -75,7 +75,7 @@ def train(conf, _model):
                     _model.label: train_batches["label"][batch_index]
                 }
 
-                batch_index = (batch_index + 1) % batch_num;
+                batch_index = (batch_index + 1) % batch_num
 
                 _, curr_loss = sess.run([_model.g_updates, _model.loss], feed_dict = feed)
 

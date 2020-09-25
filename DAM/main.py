@@ -52,7 +52,3 @@ conf = {
 
 model = net.Net(conf)
 train.train(conf, model)
-
-#test and evaluation, init_model in conf should be set
-#test.test(conf, model)
-
