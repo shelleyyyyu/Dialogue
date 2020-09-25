@@ -1,13 +1,14 @@
-import sys;
+import sys
+from sklearn.metrics import accuracy_score, roc_auc_score
 
 def get_p_at_n_in_m(data, n, m, ind):
-	pos_score = data[ind][0];
-	curr = data[ind:ind+m];
+	pos_score = data[ind][0]
+	curr = data[ind:ind+m]
 	curr = sorted(curr, key = lambda x:x[0], reverse=True)
 
 	if curr[n-1][0] <= pos_score:
-		return 1;
-	return 0;
+		return 1
+	return 0
 
 def evaluate(file_path):
 	data = []
@@ -40,5 +41,23 @@ def evaluate(file_path):
 		p_at_5_in_10 += get_p_at_n_in_m(data, 5, 10, ind)
 
 	return (p_at_1_in_2/length, p_at_1_in_10/length, p_at_2_in_10/length, p_at_5_in_10/length)
-	
 
+
+def evaluate_auc(file_path):
+	prob_1_list, pred_label_list, truth_label_list = [], [], []
+	with open(file_path, 'r') as file:
+		for line in file:
+			line = line.strip()
+			tokens = line.split("\t")
+
+			if len(tokens) != 2:
+				continue
+
+			prob_1_list.append(float(tokens[0]))
+			pred_label_list.append(1 if tokens[0] > 0.5 else 0)
+			truth_label_list.append(int(tokens[1]))
+
+	auc = roc_auc_score(truth_label_list, prob_1_list)
+	acc = accuracy_score(truth_label_list, pred_label_list)
+
+	return (auc, acc)
