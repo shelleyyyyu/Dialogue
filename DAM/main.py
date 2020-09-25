@@ -44,7 +44,7 @@ conf = {
     "max_turn_len": 30,
 
     "max_to_keep": 1,
-    "num_scan_data": 2,
+    "num_scan_data": 5,
     "_EOS_": 1, #1 for douban data 28270 for ubuntu
     "final_n_class": 1,
 }

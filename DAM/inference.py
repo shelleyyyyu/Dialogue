@@ -18,10 +18,10 @@ import bin.test_and_evaluate as test
 # configure
 
 conf = {
-    "data_path": "./data/douban/data.pkl",
-    "save_path": "./output/douban/",
-    "word_emb_init": "./data/douban/word_embedding_debug.pkl",
-    "init_model": './output/douban/model.ckpt.10', #should be set for test
+    "data_path": "./data/jdqa/data.pkl",
+    "save_path": "./output/jdqa/",
+    "word_emb_init": "./data/jdqa/word_embedding.pkl",
+    "init_model": './output/jdqa/model.ckpt.10', #should be set for test
 
     "rand_seed": None, 
 
@@ -44,7 +44,7 @@ conf = {
     "max_turn_len": 30,
 
     "max_to_keep": 1,
-    "num_scan_data": 2,
+    "num_scan_data": 5,
     "_EOS_": 1, #1 for douban data 28270 for ubuntu
     "final_n_class": 1,
 }

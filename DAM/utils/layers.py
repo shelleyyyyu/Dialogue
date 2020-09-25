@@ -94,11 +94,6 @@ def loss(x, y, num_classes=2, is_clip=True, clip_value=10):
         name='bias',
         shape=[num_classes],
         initializer=tf.zeros_initializer())
-
-    #print(x.shape)
-    #print(W.shape)
-    #print(bias.shape)
-
     logits = tf.matmul(x, W) + bias
     #print(logits.shape)
     #print('-'*100)
