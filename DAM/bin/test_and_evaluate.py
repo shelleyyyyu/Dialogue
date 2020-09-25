@@ -7,7 +7,7 @@ import tensorflow as tf
 import numpy as np
 
 import utils.reader as reader
-import utils.evaluation as eva
+import utils.douban_evaluation as eva
 
 
 def test(conf, _model):
