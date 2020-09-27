@@ -43,7 +43,7 @@ def evaluate(file_path):
 	return (p_at_1_in_2/length, p_at_1_in_10/length, p_at_2_in_10/length, p_at_5_in_10/length)
 
 
-def evaluate_auc(file_path):
+def evaluate_auc_from_file(file_path):
 	prob_1_list, pred_label_list, truth_label_list = [], [], []
 	with open(file_path, 'r') as file:
 		for line in file:
@@ -57,7 +57,19 @@ def evaluate_auc(file_path):
 			pred_label_list.append(1 if tokens[0] > 0.5 else 0)
 			truth_label_list.append(int(tokens[1]))
 
-	auc = roc_auc_score(truth_label_list, prob_1_list)
+	#auc = roc_auc_score(truth_label_list, prob_1_list)
 	acc = accuracy_score(truth_label_list, pred_label_list)
 
-	return (auc, acc)
+	return acc
+
+
+def evaluate_auc(probs, truth_labels):
+	prob_1_list, pred_label_list, truth_label_list = [], [], []
+	for i in range(len(probs)):
+		prob_1_list.append(float(probs[i]))
+		pred_label_list.append(1 if float(probs[i]) > 0.5 else 0)
+		truth_label_list.append(int(truth_labels[i]))
+
+	#auc = roc_auc_score(truth_label_list, prob_1_list)
+	acc = accuracy_score(truth_label_list, pred_label_list)
+	return acc

@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import cPickle as pickle
-
+from utils.gumbel_softmax import gumbel_softmax
 import utils.layers as layers
 import utils.operations as op
 
@@ -169,7 +169,8 @@ class Net(object):
             #loss and train
             with tf.variable_scope('loss'):
                 self.loss, self.logits, self.y_pred = layers.loss(final_info, self.label)
-
+                self.gumbel_softmax = gumbel_softmax(self.logits, hard=False)
+                self.gumbel_softmax_label = gumbel_softmax(self.logits, hard=True)
                 self.global_step = tf.Variable(0, trainable=False)
                 initial_learning_rate = self._conf['learning_rate']
                 self.learning_rate = tf.train.exponential_decay(

@@ -37,16 +37,21 @@ conf = {
 
     "learning_rate": 1e-3,
     "vocab_size": 256358,
-    "batch_size": 256, #256 fot train 200 for test
+    "batch_size": 10, #256 fot train 200 for test
     "emb_size": 80,
 
     "max_turn_num": 1,
     "max_turn_len": 30,
 
-    "max_to_keep": 3,
+    "max_to_keep": 1,
     "num_scan_data": 5,
-    "_EOS_": 1, #1 for douban data 28270 for ubuntu
+    "_EOS_": 1, #1 for douban data; 28270 for ubuntu
     "final_n_class": 1,
+
+    "matching_pretrain_epoch": 5,
+    "calibration_pretrain_epoch": 5,
+    "matching_pretrain_model_save_name": 'm',
+    "calibration_pretrain_model_save_name": 'c',
 }
 
 matching_model = net.Net(conf)
