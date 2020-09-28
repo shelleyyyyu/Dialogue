@@ -186,14 +186,14 @@ class Net(object):
                     global_step=self.global_step)
 
                 self.init = tf.global_variables_initializer()
-                self.saver = tf.train.Saver(max_to_keep = self._conf["max_to_keep"])
+                self.saver = tf.train.Saver(max_to_keep=self._conf["max_to_keep"])
                 self.all_variables = tf.global_variables() 
                 self.all_operations = self._graph.get_operations()
                 self.grads_and_vars = Optimizer.compute_gradients(self.loss)
 
                 for grad, var in self.grads_and_vars:
                     if grad is None:
-                        print var
+                        print(var)
 
                 self.capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in self.grads_and_vars]
                 self.g_updates = Optimizer.apply_gradients(

@@ -189,7 +189,7 @@ class Net(object):
 
                 for grad, var in self.grads_and_vars:
                     if grad is None:
-                        print var
+                        print(var)
 
                 self.capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in self.grads_and_vars]
                 self.g_updates = Optimizer.apply_gradients(
