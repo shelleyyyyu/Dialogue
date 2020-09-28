@@ -107,9 +107,9 @@ def train(conf, m_model, c_model):
     print('=' * 60 + '\n' + 'Calibration Network Pre-training' + '\n' + '=' * 60)
     c_graph = c_model.build_graph()
     print(str(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))) + ' - build calibration pretrain model graph success')
-    #_c_pretrain_model_name = _pretrain_DAM(c_graph, c_model, conf, conf['calibration_pretrain_epoch'], train_data, val_batches, conf['matching_pretrain_model_save_name'], init_model_path=None)
-    #if _c_pretrain_model_name != '' or None: conf["calibration_init_model"] = _c_pretrain_model_name
-    #print('Pretrained Calibration Model Save Name %s' %_c_pretrain_model_name)
+    _c_pretrain_model_name = _pretrain_DAM(c_graph, c_model, conf, conf['calibration_pretrain_epoch'], train_data, val_batches, conf['matching_pretrain_model_save_name'], init_model_path=None)
+    if _c_pretrain_model_name != '' or None: conf["calibration_init_model"] = _c_pretrain_model_name
+    print('Pretrained Calibration Model Save Name %s' %_c_pretrain_model_name)
 
     print('=' * 60 + '\n' + 'Matching Network Pre-training' + '\n' + '=' * 60)
     m_graph = m_model.build_graph()
