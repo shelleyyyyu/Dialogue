@@ -18,7 +18,9 @@ import bin.test_and_evaluate as test
 
 conf = {
     "data_path": "./data/jdqa/data.pkl",
-    "save_path": "./output/jdqa/",
+    "c_save_path": "./output/jdqa/calibration/",
+    "m_save_path": "./output/jdqa/matching/",
+    "j_save_path": "./output/jdqa/joint/",
     "word_emb_init": './data/jdqa/word_embedding.pkl',
     "init_model": None, #should be set for test
 
@@ -36,7 +38,7 @@ conf = {
 
     "learning_rate": 1e-3,
     "vocab_size": 256358,
-    "batch_size": 10, #256 fot train 200 for test
+    "batch_size": 256, #256 fot train 200 for test
     "emb_size": 80,
 
     "max_turn_num": 1,

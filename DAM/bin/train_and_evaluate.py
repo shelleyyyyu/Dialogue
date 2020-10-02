@@ -57,6 +57,9 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
                 print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + ' - save step: %s' % index)
                 for batch_index in xrange(dev_batch_num):
                     _feed = {
+                        _model.is_pretrain_calibration: True,
+                        _model.is_pretrain_matching: False,
+                        _model.is_joint_learning: False,
                         _model.c_turns: dev_batches["turns"][batch_index],
                         _model.c_tt_turns_len: dev_batches["tt_turns_len"][batch_index],
                         _model.c_every_turn_len: dev_batches["every_turn_len"][batch_index],
@@ -72,7 +75,7 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
                 result = eva.evaluate_auc(_y_pred_list, label_list)
                 if result > best_result:
                     best_result = result
-                    _save_path = _model.saver.save(_sess, conf["save_path"] + "pretrain_calibration_model.ckpt." + str(
+                    _save_path = _model.saver.save(_sess, conf["c_save_path"] + "pretrain_calibration_model.ckpt." + str(
                         step / conf["save_step"]))
                     _pretrain_update_model_save_name = "pretrain_calibration_model.ckpt." + str(step / conf["save_step"])
                     print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + " - success saving model - " + _pretrain_update_model_save_name + " - in " + _save_path)
@@ -137,6 +140,9 @@ def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
                         _model.c_response: dev_batches["response"][batch_index],
                         _model.c_response_len: dev_batches["response_len"][batch_index],
                         _model.c_label: dev_batches["label"][batch_index],
+                        _model.is_pretrain_calibration: False,
+                        _model.is_pretrain_matching: True,
+                        _model.is_joint_learning: False,
                         _model.m_turns: dev_batches["turns"][batch_index],
                         _model.m_tt_turns_len: dev_batches["tt_turns_len"][batch_index],
                         _model.m_every_turn_len: dev_batches["every_turn_len"][batch_index],
@@ -152,7 +158,7 @@ def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
                 result = eva.evaluate_auc(_y_pred_list, label_list)
                 if result > best_result:
                     best_result = result
-                    _save_path = _model.saver.save(_sess, conf["save_path"] + "pretrain_matching_model.ckpt." + str(
+                    _save_path = _model.saver.save(_sess, conf["m_save_path"] + "pretrain_matching_model.ckpt." + str(
                         step / conf["save_step"]))
                     _pretrain_update_model_save_name = "pretrain_matching_model.ckpt." + str(step / conf["save_step"])
                     print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + " - success saving model - " + _pretrain_update_model_save_name + " - in " + _save_path)
@@ -163,8 +169,14 @@ def train(conf, _model):
     if conf['rand_seed'] is not None:
         np.random.seed(conf['rand_seed'])
 
-    if not os.path.exists(conf['save_path']):
-        os.makedirs(conf['save_path'])
+    if not os.path.exists(conf['c_save_path']):
+        os.makedirs(conf['c_save_path'])
+
+    if not os.path.exists(conf['m_save_path']):
+        os.makedirs(conf['m_save_path'])
+
+    if not os.path.exists(conf['j_save_path']):
+        os.makedirs(conf['j_save_path'])
 
     # load data
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - start loading data')
@@ -195,12 +207,12 @@ def train(conf, _model):
         print('=' * 60 + '\n' + 'Calibration Network Pre-training' + '\n' + '=' * 60)
         _model, _pretrain_model_name = _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches)
         if _pretrain_model_name != '' or None: conf["init_model"] = str(_pretrain_model_name)
-        print('Pretrained Model Save Name (Calibration): %s' %str(_pretrain_model_name))
+        print('Pretrained Model Save Name (Calibration): %s' %(str(_pretrain_model_name)))
 
         print('=' * 60 + '\n' + 'Matching Network Pre-training' + '\n' + '=' * 60)
         _model, _pretrain_model_name = _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches)
         if _pretrain_model_name != '' or None: conf["init_model"] = str(_pretrain_model_name)
-        print('Pretrained Model Save Name (Matching): %s' %str(_pretrain_model_name))
+        print('Pretrained Model Save Name (Matching): %s' %(str(_pretrain_model_name)))
 
         # refine conf
         batch_num = int(len(train_data['y']) / conf["batch_size"])
@@ -349,7 +361,7 @@ def train(conf, _model):
                     print('Epoch %d - Accuracy: %.3f' %(epoch, result))
                     if result > best_result:
                         best_result = result
-                        _save_path = _model.saver.save(_sess, conf["save_path"] + "joint_learning_model.ckpt." + str(step / conf["save_step"]))
+                        _save_path = _model.saver.save(_sess, conf["j_save_path"] + "joint_learning_model.ckpt." + str(step / conf["save_step"]))
                         print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + " - finish evaluation - success saving model in " + _save_path)
 
                 

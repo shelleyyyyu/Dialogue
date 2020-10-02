@@ -7,7 +7,7 @@ import tensorflow as tf
 import numpy as np
 
 import utils.reader as reader
-import models.net as net
+import models.joint_net as joint_net
 import utils.evaluation as eva
 #for douban
 #import utils.douban_evaluation as eva
@@ -19,10 +19,11 @@ import bin.test_and_evaluate as test
 
 conf = {
     "data_path": "./data/jdqa/data.pkl",
-    "save_path": "./output/jdqa/",
+    "c_save_path": "./output/jdqa/calibration/",
+    "m_save_path": "./output/jdqa/matching/",
+    "j_save_path": "./output/jdqa/joint/",
     "word_emb_init": './data/jdqa/word_embedding.pkl',
-    "calibration_init_model": '/Users/shelly/Data_calibration/code/Dialogue/DAM/output/jdqa/c_model.ckpt.2', #should be set for test
-    "matching_init_model": '/Users/shelly/Data_calibration/code/Dialogue/DAM/output/jdqa/m_model.ckpt.2', #should be set for test
+    "init_model": None,  # should be set for test
 
     "rand_seed": None,
 
@@ -50,7 +51,6 @@ conf = {
     "final_n_class": 1,
 }
 
-matching_model = net.Net(conf)
-calibration_model = net.Net(conf)
-test.test(conf, matching_model, calibration_model)
+joint_model = joint_net.Net(conf)
+test.test(conf, joint_model)
 
