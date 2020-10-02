@@ -11,79 +11,154 @@ import utils.reader as reader
 import utils.evaluation as eva
 from sklearn.metrics import accuracy_score
 
-def _pretrain_DAM(_graph, _model, conf, epochs, train_data, val_batches, model_save_name, init_model_path=None):
+def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
     _pretrain_update_model_save_name = None
-    with tf.Session(graph=_graph) as _sess:
-        #conf
-        batch_num = int(len(train_data['y']) / conf["batch_size"])
-        val_batch_num = len(val_batches["response"])
-        conf["train_steps"] = epochs * batch_num
-        conf["save_step"] = int(max(1, batch_num / 10))
-        conf["print_step"] = int(max(1, batch_num / 100))
+    #conf
+    batch_num = int(len(train_data['y']) / conf["batch_size"])
+    dev_batch_num = len(dev_batches["response"])
+    conf["train_steps"] = conf['calibration_pretrain_epoch'] * batch_num
+    conf["save_step"] = int(max(1, batch_num / 10))
+    conf["print_step"] = int(max(1, batch_num / 100))
 
-        # Init calibration model sess
-        _model.init.run(session=_sess)
-        if init_model_path is not None:
-            _model.saver.restore(_sess, init_model_path)
-            print("success init model %s" % init_model_path)
+    # Indicators
+    average_loss, step, best_result = 0.0, 0, 0.0
 
-        # Indicators
-        average_loss, step, best_result = 0.0, 0, 0.0
+    for epoch in xrange(conf['calibration_pretrain_epoch']):
+        #starting shuffle train data
+        shuffle_train = reader.unison_shuffle(train_data)
+        train_batches = reader.build_batches(shuffle_train, conf)
+        for batch_index in range(batch_num):
+            _feed = {
+                _model.is_pretrain_calibration: True,
+                _model.is_pretrain_matching: False,
+                _model.is_joint_learning: False,
+                _model.c_turns: train_batches["turns"][batch_index],
+                _model.c_tt_turns_len: train_batches["tt_turns_len"][batch_index],
+                _model.c_every_turn_len: train_batches["every_turn_len"][batch_index],
+                _model.c_response: train_batches["response"][batch_index],
+                _model.c_response_len: train_batches["response_len"][batch_index],
+                _model.c_label: train_batches["label"][batch_index]
+            }
 
-        for epoch in xrange(epochs):
-            #starting shuffle train data
-            shuffle_train = reader.unison_shuffle(train_data)
-            train_batches = reader.build_batches(shuffle_train, conf)
-            for batch_index in range(batch_num):
-                _feed = {
-                    _model.turns: train_batches["turns"][batch_index],
-                    _model.tt_turns_len: train_batches["tt_turns_len"][batch_index],
-                    _model.every_turn_len: train_batches["every_turn_len"][batch_index],
-                    _model.response: train_batches["response"][batch_index],
-                    _model.response_len: train_batches["response_len"][batch_index],
-                    _model.label: train_batches["label"][batch_index]
-                }
+            _, _curr_loss, _logits, _y_pred = _sess.run([_model.c_g_updates, _model.c_loss, _model.c_logits, _model.c_y_pred], feed_dict=_feed)
+            average_loss += _curr_loss
 
+            step += 1
 
-                _, _curr_loss, _logits, _y_pred = _sess.run([_model.g_updates, _model.loss, _model.logits, _model.y_pred], feed_dict=_feed)
-                average_loss += _curr_loss
+            if step % conf["print_step"] == 0 and step > 0:
+                _g_step, _lr = _sess.run([_model.c_global_step, _model.c_learning_rate])
+                print('Pretrain Calibration Model - step: %s, lr: %s' % (_g_step, _lr))
+                print("processed: [" + str(step * 1.0 / batch_num) + "] loss: [" + str(average_loss / conf["print_step"]) + ']')
+                average_loss = 0
+            if step % conf["save_step"] == 0 and step > 0:
+                _y_pred_list = []
+                label_list = []
+                index = step / conf['save_step']
+                print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + ' - save step: %s' % index)
+                for batch_index in xrange(dev_batch_num):
+                    _feed = {
+                        _model.c_turns: dev_batches["turns"][batch_index],
+                        _model.c_tt_turns_len: dev_batches["tt_turns_len"][batch_index],
+                        _model.c_every_turn_len: dev_batches["every_turn_len"][batch_index],
+                        _model.c_response: dev_batches["response"][batch_index],
+                        _model.c_response_len: dev_batches["response_len"][batch_index],
+                        _model.c_label: dev_batches["label"][batch_index]
+                    }
 
-                step += 1
+                    _, _y_pred = _sess.run([_model.c_logits, _model.c_y_pred], feed_dict=_feed)
+                    label_list.extend(dev_batches["label"][batch_index])
+                    _y_pred_list.extend(list(_y_pred[:,-1]))
+                # write evaluation result
+                result = eva.evaluate_auc(_y_pred_list, label_list)
+                if result > best_result:
+                    best_result = result
+                    _save_path = _model.saver.save(_sess, conf["save_path"] + "pretrain_calibration_model.ckpt." + str(
+                        step / conf["save_step"]))
+                    _pretrain_update_model_save_name = "pretrain_calibration_model.ckpt." + str(step / conf["save_step"])
+                    print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + " - success saving model - " + _pretrain_update_model_save_name + " - in " + _save_path)
+    return _model, _pretrain_update_model_save_name
 
-                if step % conf["print_step"] == 0 and step > 0:
-                    _g_step, _lr = _sess.run([_model.global_step, _model.learning_rate])
-                    print('Pretrain Model - step: %s, lr: %s' % (_g_step, _lr))
-                    print("processed: [" + str(step * 1.0 / batch_num) + "] loss: [" + str(average_loss / conf["print_step"]) + ']')
-                    average_loss = 0
-                if step % conf["save_step"] == 0 and step > 0:
-                    _y_pred_list = []
-                    label_list = []
-                    index = step / conf['save_step']
-                    print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + ' - save step: %s' % index)
-                    for batch_index in xrange(val_batch_num):
-                        _feed = {
-                            _model.turns: val_batches["turns"][batch_index],
-                            _model.tt_turns_len: val_batches["tt_turns_len"][batch_index],
-                            _model.every_turn_len: val_batches["every_turn_len"][batch_index],
-                            _model.response: val_batches["response"][batch_index],
-                            _model.response_len: val_batches["response_len"][batch_index],
-                            _model.label: val_batches["label"][batch_index]
-                        }
+def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
+    _pretrain_update_model_save_name = None
+    #conf
+    batch_num = int(len(train_data['y']) / conf["batch_size"])
+    dev_batch_num = len(dev_batches["response"])
+    conf["train_steps"] = conf['matching_pretrain_epoch'] * batch_num
+    conf["save_step"] = int(max(1, batch_num / 10))
+    conf["print_step"] = int(max(1, batch_num / 100))
 
-                        _, _y_pred = _sess.run([_model.logits, _model.y_pred], feed_dict=_feed)
-                        label_list.extend(val_batches["label"][batch_index])
-                        _y_pred_list.extend(list(_y_pred[:,-1]))
-                    # write evaluation result
-                    result = eva.evaluate_auc(_y_pred_list, label_list)
-                    if result > best_result:
-                        best_result = result
-                        _save_path = _model.saver.save(_sess, conf["save_path"] + model_save_name + "_model.ckpt." + str(
-                            step / conf["save_step"]))
-                        _pretrain_update_model_save_name = model_save_name + "_model.ckpt." + str(step / conf["save_step"])
-                        print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + " - success saving model - " + model_save_name + " - in " + _save_path)
-    return _pretrain_update_model_save_name
+    # Indicators
+    average_loss, step, best_result = 0.0, 0, 0.0
 
-def train(conf, m_model, c_model):
+    for epoch in xrange(conf['matching_pretrain_epoch']):
+        #starting shuffle train data
+        shuffle_train = reader.unison_shuffle(train_data)
+        train_batches = reader.build_batches(shuffle_train, conf)
+        for batch_index in range(batch_num):
+
+            _feed = {
+                _model.is_pretrain_calibration: False,
+                _model.is_pretrain_matching: True,
+                _model.is_joint_learning: False,
+                _model.c_turns: train_batches["turns"][batch_index],
+                _model.c_tt_turns_len: train_batches["tt_turns_len"][batch_index],
+                _model.c_every_turn_len: train_batches["every_turn_len"][batch_index],
+                _model.c_response: train_batches["response"][batch_index],
+                _model.c_response_len: train_batches["response_len"][batch_index],
+                _model.c_label: train_batches["label"][batch_index],
+                _model.m_turns: train_batches["turns"][batch_index],
+                _model.m_tt_turns_len: train_batches["tt_turns_len"][batch_index],
+                _model.m_every_turn_len: train_batches["every_turn_len"][batch_index],
+                _model.m_response: train_batches["response"][batch_index],
+                _model.m_response_len: train_batches["response_len"][batch_index],
+                _model.m_label: train_batches["label"][batch_index]
+            }
+
+            _, _curr_loss, _logits, _y_pred = _sess.run([_model.m_g_updates, _model.m_loss, _model.m_logits, _model.m_y_pred], feed_dict=_feed)
+            average_loss += _curr_loss
+
+            step += 1
+
+            if step % conf["print_step"] == 0 and step > 0:
+                _g_step, _lr = _sess.run([_model.m_global_step, _model.m_learning_rate])
+                print('Pretrain Matching Model - step: %s, lr: %s' % (_g_step, _lr))
+                print("processed: [" + str(step * 1.0 / batch_num) + "] loss: [" + str(average_loss / conf["print_step"]) + ']')
+                average_loss = 0
+            if step % conf["save_step"] == 0 and step > 0:
+                _y_pred_list = []
+                label_list = []
+                index = step / conf['save_step']
+                print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + ' - save step: %s' % index)
+                for batch_index in xrange(dev_batch_num):
+                    _feed = {
+                        _model.c_turns: dev_batches["turns"][batch_index],
+                        _model.c_tt_turns_len: dev_batches["tt_turns_len"][batch_index],
+                        _model.c_every_turn_len: dev_batches["every_turn_len"][batch_index],
+                        _model.c_response: dev_batches["response"][batch_index],
+                        _model.c_response_len: dev_batches["response_len"][batch_index],
+                        _model.c_label: dev_batches["label"][batch_index],
+                        _model.m_turns: dev_batches["turns"][batch_index],
+                        _model.m_tt_turns_len: dev_batches["tt_turns_len"][batch_index],
+                        _model.m_every_turn_len: dev_batches["every_turn_len"][batch_index],
+                        _model.m_response: dev_batches["response"][batch_index],
+                        _model.m_response_len: dev_batches["response_len"][batch_index],
+                        _model.m_label: dev_batches["label"][batch_index]
+                    }
+
+                    _, _y_pred = _sess.run([_model.m_logits, _model.m_y_pred], feed_dict=_feed)
+                    label_list.extend(dev_batches["label"][batch_index])
+                    _y_pred_list.extend(list(_y_pred[:,-1]))
+                # write evaluation result
+                result = eva.evaluate_auc(_y_pred_list, label_list)
+                if result > best_result:
+                    best_result = result
+                    _save_path = _model.saver.save(_sess, conf["save_path"] + "pretrain_matching_model.ckpt." + str(
+                        step / conf["save_step"]))
+                    _pretrain_update_model_save_name = "pretrain_matching_model.ckpt." + str(step / conf["save_step"])
+                    print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + " - success saving model - " + _pretrain_update_model_save_name + " - in " + _save_path)
+    return _model, _pretrain_update_model_save_name
+
+def train(conf, _model):
     
     if conf['rand_seed'] is not None:
         np.random.seed(conf['rand_seed'])
@@ -93,60 +168,51 @@ def train(conf, m_model, c_model):
 
     # load data
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - start loading data')
-    train_data, val_data, test_data = pickle.load(open(conf["data_path"], 'rb'))
+    train_data, dev_data, test_data, validation_data = pickle.load(open(conf["data_path"], 'rb'))
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - finish loading data')
 
-    # load val_batches
-    print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + " - start building validation batches")
-    val_batches = reader.build_batches(val_data, conf)
-    print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + " - finish building validation batches")
-    print('configurations: %s' %conf)
-
+    # load dev_batches
+    print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + " - start building dev/validation batches")
+    dev_batches = reader.build_batches(dev_data, conf)
+    validation_batches = reader.build_batches(validation_data, conf)
+    print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + " - finish building dev/validation batches")
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - Finish Data Pre-processing')
 
-    print('=' * 60 + '\n' + 'Calibration Network Pre-training' + '\n' + '=' * 60)
-    c_graph = c_model.build_graph()
-    print(str(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))) + ' - build calibration pretrain model graph success')
-    _c_pretrain_model_name = _pretrain_DAM(c_graph, c_model, conf, conf['calibration_pretrain_epoch'], train_data, val_batches, conf['matching_pretrain_model_save_name'], init_model_path=None)
-    if _c_pretrain_model_name != '' or None: conf["calibration_init_model"] = _c_pretrain_model_name
-    print('Pretrained Calibration Model Save Name %s' %_c_pretrain_model_name)
+    #Print configuration setting
+    print('configurations: %s' %conf)
 
-    print('=' * 60 + '\n' + 'Matching Network Pre-training' + '\n' + '=' * 60)
-    m_graph = m_model.build_graph()
-    print(str(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))) + ' - build matching pretrain model graph success')
-    _m_pretrain_model_name = _pretrain_DAM(m_graph, m_model, conf, conf['matching_pretrain_epoch'], train_data, val_batches, conf['calibration_pretrain_model_save_name'], init_model_path=None)
-    if _m_pretrain_model_name != '' or None: conf["matching_init_model"] = _m_pretrain_model_name
-    print('Pretrained Matching Model Save Name %s' %_m_pretrain_model_name)
+    _graph = _model.build_graph()
+    print(str(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))) + ' - build model graph success')
+    tensorboard_data = './log/DAM_JDQA'
+    with tf.Session(graph=_graph) as _sess:
+        train_summary_writer = tf.summary.FileWriter(tensorboard_data, _sess._graph)
+        tf.global_variables_initializer().run()
 
-    # refine conf
-    batch_num = int(len(train_data['y']) / conf["batch_size"])
-    val_batch_num = len(val_batches["response"])
+        if conf["init_model"] is not None:
+            _model.saver.restore(_sess, conf["init_model"])
+            print("success init model %s" % conf["init_model"])
 
-    conf["train_steps"] = conf["num_scan_data"] * batch_num
-    conf["save_step"] = int(max(1, batch_num / 10))
-    conf["print_step"] = int(max(1, batch_num / 100))
+        print('=' * 60 + '\n' + 'Calibration Network Pre-training' + '\n' + '=' * 60)
+        _model, _pretrain_model_name = _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches)
+        if _pretrain_model_name != '' or None: conf["init_model"] = str(_pretrain_model_name)
+        print('Pretrained Model Save Name (Calibration): %s' %str(_pretrain_model_name))
 
-    #c_graph = c_model.build_graph()
-    #print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - build calibration model graph success')
-    #m_graph = m_model.build_graph()
-    #print(str(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))) + ' - build matching model graph success')
+        print('=' * 60 + '\n' + 'Matching Network Pre-training' + '\n' + '=' * 60)
+        _model, _pretrain_model_name = _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches)
+        if _pretrain_model_name != '' or None: conf["init_model"] = str(_pretrain_model_name)
+        print('Pretrained Model Save Name (Matching): %s' %str(_pretrain_model_name))
 
-    with tf.Session(graph=c_graph) as c_sess, tf.Session(graph=m_graph) as m_sess:
+        # refine conf
+        batch_num = int(len(train_data['y']) / conf["batch_size"])
+        dev_batch_num = len(dev_batches["response"])
+        validation_batch_num = len(validation_batches["response"])
 
-        # Init & Restore Pre-trained calibration model & sess
-        c_model.init.run(session=c_sess)
-        if conf["calibration_init_model"]:
-            c_model.saver.restore(c_sess, conf["save_path"] + conf["calibration_init_model"])
-            print("success init calibration model %s" %conf["calibration_init_model"])
-
-        # Init & Restore Pre-trained matching model & sess
-        m_model.init.run(session=m_sess)
-        if conf["matching_init_model"]:
-            m_model.saver.restore(m_sess, conf["save_path"] + conf["matching_init_model"])
-            print("success init matching model %s" %conf["matching_init_model"])
+        conf["train_steps"] = conf["num_scan_data"] * batch_num
+        conf["save_step"] = int(max(1, batch_num / 10))
+        conf["print_step"] = int(max(1, batch_num / 100))
 
         # Indicators
-        average_loss, average_correction_rate, step, best_result = 0.0, 0.0, 0, 0.0
+        c_average_m_loss, c_average_c_loss, m_average_m_loss, m_average_c_loss, average_correction_rate, step, best_result = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 
         for epoch in xrange(conf["num_scan_data"]):
             print('starting shuffle train data')
@@ -155,115 +221,136 @@ def train(conf, m_model, c_model):
             print('finish building train data')
             for batch_index in range(batch_num):
 
-                # -------------------- Data Calibration Model ------------------- #
-                c_feed = {
-                    c_model.turns: train_batches["turns"][batch_index],
-                    c_model.tt_turns_len: train_batches["tt_turns_len"][batch_index],
-                    c_model.every_turn_len: train_batches["every_turn_len"][batch_index],
-                    c_model.response: train_batches["response"][batch_index],
-                    c_model.response_len: train_batches["response_len"][batch_index],
-                    c_model.label: train_batches["label"][batch_index]
+                # -------------------- Matching Model Optimisation ------------------- #
+                _feed = {
+                    _model.is_pretrain_calibration: False,
+                    _model.is_pretrain_matching: False,
+                    _model.is_joint_learning: True,
+                    _model.c_turns: train_batches["turns"][batch_index],
+                    _model.c_tt_turns_len: train_batches["tt_turns_len"][batch_index],
+                    _model.c_every_turn_len: train_batches["every_turn_len"][batch_index],
+                    _model.c_response: train_batches["response"][batch_index],
+                    _model.c_response_len: train_batches["response_len"][batch_index],
+                    _model.c_label: train_batches["label"][batch_index],
+                    _model.m_turns: train_batches["turns"][batch_index],
+                    _model.m_tt_turns_len: train_batches["tt_turns_len"][batch_index],
+                    _model.m_every_turn_len: train_batches["every_turn_len"][batch_index],
+                    _model.m_response: train_batches["response"][batch_index],
+                    _model.m_response_len: train_batches["response_len"][batch_index],
+                    _model.m_label: train_batches["label"][batch_index]
                 }
+
+                c_loss_summary = tf.summary.scalar("train/matching_opt/c_loss", _model.c_loss)
+                m_loss_summary = tf.summary.scalar("train/matching_opt/m_loss", _model.m_loss)
+                train_summary_m_op = tf.summary.merge([c_loss_summary, m_loss_summary])
+
+                m_target_var_name, m_summaries, c_curr_loss, c_logits, c_y_pred, c_gumbel_softmax , m_g_updates, m_curr_loss, m_logits, m_y_pred = \
+                    _sess.run([_model.m_target_var_names, train_summary_m_op, _model.c_loss, _model.c_logits, _model.c_y_pred,
+                               _model.c_gumbel_softmax, _model.m_g_updates, _model.m_loss,
+                               _model.m_logits, _model.m_y_pred], feed_dict=_feed)
+
+                if batch_index == 0:
+                    print('[1st Step] Length of optimised variables: %d' %len(m_target_var_name))
+                calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_gumbel_softmax]
+                calibrated_rate = 1 - accuracy_score(calibrated_label, train_batches["label"][batch_index])
+
+                average_correction_rate += calibrated_rate
+                m_average_m_loss += m_curr_loss
+                m_average_c_loss += c_curr_loss
 
                 batch_index = (batch_index + 1) % batch_num
 
-                #_, c_curr_loss, c_logits, c_y_pred = c_sess.run([c_model.g_updates, c_model.loss, c_model.logits, c_model.y_pred], feed_dict=c_feed)
-                c_curr_loss, c_logits, c_y_pred, gumbel_softmax = c_sess.run([c_model.loss, c_model.logits, c_model.y_pred, c_model.gumbel_softmax], feed_dict=c_feed)
-
-                calibrated_probs = gumbel_softmax[:, -1]
-                calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in gumbel_softmax]
-                calibrated_rate = 1 - accuracy_score(calibrated_label, train_batches["label"][batch_index])
-
-                # -------------------- Matching Model ------------------- #
-                m_feed = {
-
-                    m_model.turns: train_batches["turns"][batch_index],
-                    m_model.tt_turns_len: train_batches["tt_turns_len"][batch_index],
-                    m_model.every_turn_len: train_batches["every_turn_len"][batch_index],
-                    m_model.response: train_batches["response"][batch_index],
-                    m_model.response_len: train_batches["response_len"][batch_index],
-                    m_model.label: calibrated_probs
-                }
-                _, m_curr_loss, m_logits, m_y_pred = m_sess.run([m_model.g_updates, m_model.loss, m_model.logits, m_model.y_pred], feed_dict=m_feed)
-
-                average_correction_rate += calibrated_rate
-                average_loss += m_curr_loss
-
-                for batch_index in xrange(val_batch_num):
-                    c_feed = {
-                        c_model.turns: val_batches["turns"][batch_index],
-                        c_model.tt_turns_len: val_batches["tt_turns_len"][batch_index],
-                        c_model.every_turn_len: val_batches["every_turn_len"][batch_index],
-                        c_model.response: val_batches["response"][batch_index],
-                        c_model.response_len: val_batches["response_len"][batch_index],
-                        c_model.label: val_batches["label"][batch_index]
+                # -------------------- Calibration Model Optimisation ------------------- #
+                for validation_batch_index in xrange(validation_batch_num):
+                    _feed = {
+                        _model.is_pretrain_calibration: False,
+                        _model.is_pretrain_matching: False,
+                        _model.is_joint_learning: True,
+                        _model.c_turns: validation_batches["turns"][validation_batch_index],
+                        _model.c_tt_turns_len: validation_batches["tt_turns_len"][validation_batch_index],
+                        _model.c_every_turn_len: validation_batches["every_turn_len"][validation_batch_index],
+                        _model.c_response: validation_batches["response"][validation_batch_index],
+                        _model.c_response_len: validation_batches["response_len"][validation_batch_index],
+                        _model.c_label: validation_batches["label"][validation_batch_index],
+                        _model.m_turns: validation_batches["turns"][validation_batch_index],
+                        _model.m_tt_turns_len: validation_batches["tt_turns_len"][validation_batch_index],
+                        _model.m_every_turn_len: validation_batches["every_turn_len"][validation_batch_index],
+                        _model.m_response: validation_batches["response"][validation_batch_index],
+                        _model.m_response_len: validation_batches["response_len"][validation_batch_index],
+                        _model.m_label: validation_batches["label"][validation_batch_index]
                     }
-                    _, c_curr_loss = c_sess.run([c_model.g_updates, c_model.loss], feed_dict=c_feed)
+
+                    c_loss_summary = tf.summary.scalar("train/calibration_opt/c_loss", _model.c_loss)
+                    m_loss_summary = tf.summary.scalar("train/calibration_opt/m_loss", _model.m_loss)
+                    train_summary_c_op = tf.summary.merge([c_loss_summary, m_loss_summary])
+
+                    c_target_var_names, c_summaries, c_curr_loss, c_logits, c_y_pred, c_gumbel_softmax, c_g_updates, m_curr_loss, m_logits, m_y_pred = \
+                        _sess.run([_model.c_target_var_names, train_summary_c_op, _model.c_loss,
+                                   _model.c_logits, _model.c_y_pred, _model.c_gumbel_softmax,
+                                   _model.c_g_updates, _model.m_loss, _model.m_logits, _model.m_y_pred],
+                                  feed_dict=_feed)
+                    if batch_index == 0 and validation_batch_index == 0:
+                        print('[2nd Step] Length of optimised variables: %d' % len(c_target_var_names))
+                    c_average_m_loss += m_curr_loss
+                    c_average_c_loss += c_curr_loss
 
                 step += 1
 
                 if step % conf["print_step"] == 0 and step > 0:
-                    m_g_step, m_lr = m_sess.run([m_model.global_step, m_model.learning_rate])
-                    print('Matching Model - step: %s, lr: %s' %(m_g_step, m_lr))
-                    print("processed: [" + str(step * 1.0 / batch_num) + "] loss: [" + str(average_loss / conf["print_step"]) + "] calibrated_rate: [" + '%.4f'%(average_correction_rate / conf["print_step"]) + ']')
-                    print('-'*30)
-                    average_loss = 0
-                    average_correction_rate = 0
+                    c_g_step, c_lr = _sess.run([_model.c_global_step, _model.c_learning_rate])
+                    m_g_step, m_lr = _sess.run([_model.m_global_step, _model.m_learning_rate])
+                    print('='*10 + "processed: [" + str(step * 1.0 / batch_num) + "]" + '='*10)
+                    print("[Matching Model Optimisation] - step: " + str(m_g_step) + ", lr: " + str(m_lr) +", c_loss: [" + str(m_average_c_loss / conf["print_step"]) + "] m_loss: [" + str(m_average_m_loss / conf["print_step"]) + "] calibrated_rate: [" + '%.4f'%(average_correction_rate / conf["print_step"]) + ']')
+                    print("[Calibration Model Optimisation] - step: " + str(c_g_step) + ", lr: " + str(c_lr) +", c_loss: [" + str(c_average_c_loss) + "] m_loss: [" + str(c_average_m_loss) + "]")
+                    print('='*37)
+                    c_average_m_loss, c_average_c_loss, m_average_m_loss, m_average_c_loss, average_correction_rate = 0.0, 0.0, 0.0, 0.0, 0.0
+                    train_summary_writer.add_summary(m_summaries, step)
+                    train_summary_writer.add_summary(c_summaries, step)
 
-                
-                if step % conf["save_step"] == 0 and step > 0 or True:
+                if step % conf["save_step"] == 0 and step > 0:
                     index = step / conf['save_step']
-                    score_file_path = conf['save_path'] + 'score.' + str(index)
-                    score_file = open(score_file_path, 'w')
                     print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + ' - save step: %s' %index)
                     average_correction_rate = 0.0
-                    for batch_index in xrange(val_batch_num):
-                
-                        # -------------------- Data Calibration Model ------------------- #
-                        c_feed = {
-                            c_model.turns: val_batches["turns"][batch_index],
-                            c_model.tt_turns_len: val_batches["tt_turns_len"][batch_index],
-                            c_model.every_turn_len: val_batches["every_turn_len"][batch_index],
-                            c_model.response: val_batches["response"][batch_index],
-                            c_model.response_len: val_batches["response_len"][batch_index],
-                            c_model.label: val_batches["label"][batch_index]
-                        }   
-                
-                        c_logits, c_y_pred, gumbel_softmax = c_sess.run([c_model.logits, c_model.y_pred, c_model.gumbel_softmax], feed_dict=c_feed)
-                        calibrated_probs = gumbel_softmax[:,-1]
-                        calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in gumbel_softmax]
-                        calibrated_rate = 1 - accuracy_score(calibrated_label, val_batches["label"][batch_index])
-                        average_correction_rate += calibrated_rate
-                        # -------------------- Matching Model ------------------- #
-                        m_feed = {
-                            m_model.turns: val_batches["turns"][batch_index],
-                            m_model.tt_turns_len: val_batches["tt_turns_len"][batch_index],
-                            m_model.every_turn_len: val_batches["every_turn_len"][batch_index],
-                            m_model.response: val_batches["response"][batch_index],
-                            m_model.response_len: val_batches["response_len"][batch_index],
-                            m_model.label: calibrated_probs
+                    label_list, _y_pred_list = [], []
+                    for batch_index in xrange(dev_batch_num):
+
+                        _feed = {
+                            _model.is_pretrain_calibration: False,
+                            _model.is_pretrain_matching: False,
+                            _model.is_joint_learning: True,
+                            _model.c_turns: dev_batches["turns"][batch_index],
+                            _model.c_tt_turns_len: dev_batches["tt_turns_len"][batch_index],
+                            _model.c_every_turn_len: dev_batches["every_turn_len"][batch_index],
+                            _model.c_response: dev_batches["response"][batch_index],
+                            _model.c_response_len: dev_batches["response_len"][batch_index],
+                            _model.c_label: dev_batches["label"][batch_index],
+                            _model.m_turns: dev_batches["turns"][batch_index],
+                            _model.m_tt_turns_len: dev_batches["tt_turns_len"][batch_index],
+                            _model.m_every_turn_len: dev_batches["every_turn_len"][batch_index],
+                            _model.m_response: dev_batches["response"][batch_index],
+                            _model.m_response_len: dev_batches["response_len"][batch_index],
+                            _model.m_label: dev_batches["label"][batch_index]
                         }
-                        m_logits, m_y_pred = m_sess.run([m_model.logits, m_model.y_pred], feed_dict=m_feed)
-                        for i in xrange(conf["batch_size"]):
-                            score_file.write(
-                                str(m_y_pred[i][-1]) + '\t' +
-                                str(val_batches["label"][batch_index][i]) + '\n')
 
-                    print('Data Calibration Rate: %.4f' % (average_correction_rate/val_batch_num))
-                    score_file.close()
+                        c_logits, c_y_pred, m_logits, m_y_pred, c_gumbel_softmax = _sess.run(
+                            [_model.c_logits, _model.c_y_pred, _model.m_logits, _model.m_y_pred, _model.c_gumbel_softmax], feed_dict=_feed)
 
-                    #write evaluation result
-                    result = eva.evaluate_auc_from_file(score_file_path)
-                    #result_file_path = conf["save_path"] + "result." + str(index)
-                    #with open(result_file_path, 'w') as out_file:
-                    #    out_file.write(str(result) + '\n')
-                    #print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + ' - finish evaluation')
-                    print('Epcoh %d - Accuracy: %.3f' %(epoch, result))
+                        calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_gumbel_softmax]
+                        calibrated_rate = 1 - accuracy_score(calibrated_label, dev_batches["label"][batch_index])
+
+                        average_correction_rate += calibrated_rate
+
+                        label_list.extend(dev_batches["label"][batch_index])
+                        _y_pred_list.extend(list(m_y_pred[:, -1]))
+                        batch_index = (batch_index + 1) % batch_num
+                        # write evaluation result
+                    print('Data Calibration Rate: %.4f' % (average_correction_rate/dev_batch_num))
+                    result = eva.evaluate_auc(_y_pred_list, label_list)
+                    print('Epoch %d - Accuracy: %.3f' %(epoch, result))
                     if result > best_result:
                         best_result = result
-                        c_save_path = c_model.saver.save(c_sess, conf["save_path"] + "c.model.ckpt." + str(step / conf["save_step"]))
-                        m_save_path = m_model.saver.save(m_sess, conf["save_path"] + "m.model.ckpt." + str(step / conf["save_step"]))
-                        print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + " - finish evaluation - success saving model in " + c_save_path + "(Data Calibration Model); " + m_save_path + " (Matching Model)")
+                        _save_path = _model.saver.save(_sess, conf["save_path"] + "joint_learning_model.ckpt." + str(step / conf["save_step"]))
+                        print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + " - finish evaluation - success saving model in " + _save_path)
 
                 
 

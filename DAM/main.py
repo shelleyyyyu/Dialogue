@@ -7,7 +7,7 @@ import tensorflow as tf
 import numpy as np
 
 import utils.reader as reader
-import models.net as net
+import models.joint_net as joint_net
 import utils.evaluation as eva
 #for douban
 #import utils.douban_evaluation as eva
@@ -17,11 +17,10 @@ import bin.test_and_evaluate as test
 
 
 conf = {
-    "data_path": "./data/jdqa/data.pkl",
+    "data_path": "./data/jdqa/data_small.pkl",
     "save_path": "./output/jdqa/",
-    "word_emb_init": './data/jdqa/word_embedding.pkl',
-    "calibration_init_model": None, #should be set for test
-    "matching_init_model": None, #should be set for test
+    "word_emb_init": None,
+    "init_model": None, #should be set for test
 
     "rand_seed": None, 
 
@@ -44,16 +43,15 @@ conf = {
     "max_turn_len": 30,
 
     "max_to_keep": 1,
-    "num_scan_data": 5,
+    "num_scan_data": 1,
     "_EOS_": 1, #1 for douban data; 28270 for ubuntu
     "final_n_class": 1,
 
-    "matching_pretrain_epoch": 5,
-    "calibration_pretrain_epoch": 5,
+    "matching_pretrain_epoch": 1,
+    "calibration_pretrain_epoch": 1,
     "matching_pretrain_model_save_name": 'm',
     "calibration_pretrain_model_save_name": 'c',
 }
 
-matching_model = net.Net(conf)
-calibration_model = net.Net(conf)
-train.train(conf, matching_model, calibration_model)
+joint_model = joint_net.Net(conf)
+train.train(conf, joint_model)
