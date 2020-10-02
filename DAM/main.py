@@ -17,9 +17,9 @@ import bin.test_and_evaluate as test
 
 
 conf = {
-    "data_path": "./data/jdqa/data_small.pkl",
+    "data_path": "./data/jdqa/data.pkl",
     "save_path": "./output/jdqa/",
-    "word_emb_init": None,
+    "word_emb_init": './data/jdqa/word_embedding.pkl',
     "init_model": None, #should be set for test
 
     "rand_seed": None, 
@@ -47,8 +47,8 @@ conf = {
     "_EOS_": 1, #1 for douban data; 28270 for ubuntu
     "final_n_class": 1,
 
-    "matching_pretrain_epoch": 1,
-    "calibration_pretrain_epoch": 1,
+    "matching_pretrain_epoch": 2,
+    "calibration_pretrain_epoch": 2,
     "matching_pretrain_model_save_name": 'm',
     "calibration_pretrain_model_save_name": 'c',
 }
