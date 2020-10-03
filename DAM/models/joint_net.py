@@ -21,9 +21,9 @@ class Net(object):
 
         if self._conf['word_emb_init'] is not None:
             print('loading word emb init')
-            self._word_embedding_init = pickle.load(open(self._conf['word_emb_init'], 'rb'))
+            self.word_embedding_init = pickle.load(open(self._conf['word_emb_init'], 'rb'))
         else:
-            self._word_embedding_init = None
+            self.word_embedding_init = None
 
     def build_graph(self):
         with self._graph.as_default():
@@ -35,10 +35,10 @@ class Net(object):
                 tf.set_random_seed(rand_seed)
                 print('set tf random seed: %s' % self._conf['rand_seed'])
 
-            # --- Share Parameter: _word_embedding_init ---
+            # --- Share Parameter: word_embedding_init ---
             # word embedding
-            if self._word_embedding_init is not None:
-                word_embedding_initializer = tf.constant_initializer(self._word_embedding_init)
+            if self.word_embedding_init is not None:
+                word_embedding_initializer = tf.constant_initializer(self.word_embedding_init)
             else:
                 word_embedding_initializer = tf.random_normal_initializer(stddev=0.1)
 
@@ -49,40 +49,40 @@ class Net(object):
             self.is_joint_learning= tf.placeholder(tf.bool)
 
             # -------------------- Data Calibration Model ------------------- #
-            self.c_word_embedding = tf.get_variable(
-                name='c_word_embedding',
+            self.word_embedding = tf.get_variable(
+                name='word_embedding',
                 shape=[self._conf['vocab_size'] + 1, self._conf['emb_size']],
                 dtype=tf.float32,
                 initializer=word_embedding_initializer)
 
             # define placehloders
-            self.c_turns = tf.placeholder(
+            self._turns = tf.placeholder(
                 tf.int32,
                 shape=[self._conf["batch_size"], self._conf["max_turn_num"], self._conf["max_turn_len"]])
 
-            self.c_tt_turns_len = tf.placeholder(
+            self._tt_turns_len = tf.placeholder(
                 tf.int32,
                 shape=[self._conf["batch_size"]])
 
-            self.c_every_turn_len = tf.placeholder(
+            self._every_turn_len = tf.placeholder(
                 tf.int32,
                 shape=[self._conf["batch_size"], self._conf["max_turn_num"]])
 
-            self.c_response = tf.placeholder(
+            self._response = tf.placeholder(
                 tf.int32,
                 shape=[self._conf["batch_size"], self._conf["max_turn_len"]])
 
-            self.c_response_len = tf.placeholder(
+            self._response_len = tf.placeholder(
                 tf.int32,
                 shape=[self._conf["batch_size"]])
 
-            self.c_label = tf.placeholder(
+            self._label = tf.placeholder(
                 tf.float32,
                 shape=[self._conf["batch_size"]])
 
             # define operations
             # response part
-            c_Hr = tf.nn.embedding_lookup(self.c_word_embedding, self.c_response)
+            c_Hr = tf.nn.embedding_lookup(self.word_embedding, self._response)
 
             if self._conf['is_positional'] and self._conf['stack_num'] > 0:
                 with tf.variable_scope('c_positional'):
@@ -93,18 +93,18 @@ class Net(object):
                 with tf.variable_scope('c_self_stack_' + str(index)):
                     c_Hr = layers.block(
                         c_Hr, c_Hr, c_Hr,
-                        Q_lengths=self.c_response_len, K_lengths=self.c_response_len)
+                        Q_lengths=self._response_len, K_lengths=self._response_len)
                     c_Hr_stack.append(c_Hr)
 
             # context part
             # a list of length max_turn_num, every element is a tensor with shape [batch, max_turn_len]
-            c_list_turn_t = tf.unstack(self.c_turns, axis=1)
-            c_list_turn_length = tf.unstack(self.c_every_turn_len, axis=1)
+            c_list_turn_t = tf.unstack(self._turns, axis=1)
+            c_list_turn_length = tf.unstack(self._every_turn_len, axis=1)
 
             c_sim_turns = []
             # for every turn_t calculate matching vector
             for c_turn_t, c_t_turn_length in zip(c_list_turn_t, c_list_turn_length):
-                c_Hu = tf.nn.embedding_lookup(self.c_word_embedding, c_turn_t)  # [batch, max_turn_len, emb_size]
+                c_Hu = tf.nn.embedding_lookup(self.word_embedding, c_turn_t)  # [batch, max_turn_len, emb_size]
 
                 if self._conf['is_positional'] and self._conf['stack_num'] > 0:
                     with tf.variable_scope('c_positional', reuse=True):
@@ -127,23 +127,23 @@ class Net(object):
                         try:
                             c_t_a_r = layers.block(
                                 c_Hu_stack[index], c_Hr_stack[index], c_Hr_stack[index],
-                                Q_lengths=c_t_turn_length, K_lengths=self.c_response_len)
+                                Q_lengths=c_t_turn_length, K_lengths=self._response_len)
                         except ValueError:
                             tf.get_variable_scope().reuse_variables()
                             c_t_a_r = layers.block(
                                 c_Hu_stack[index], c_Hr_stack[index], c_Hr_stack[index],
-                                Q_lengths=c_t_turn_length, K_lengths=self.c_response_len)
+                                Q_lengths=c_t_turn_length, K_lengths=self._response_len)
 
                     with tf.variable_scope('c_r_attend_t_' + str(index)):
                         try:
                             c_r_a_t = layers.block(
                                 c_Hr_stack[index], c_Hu_stack[index], c_Hu_stack[index],
-                                Q_lengths=self.c_response_len, K_lengths=c_t_turn_length)
+                                Q_lengths=self._response_len, K_lengths=c_t_turn_length)
                         except ValueError:
                             tf.get_variable_scope().reuse_variables()
                             c_r_a_t = layers.block(
                                 c_Hr_stack[index], c_Hu_stack[index], c_Hu_stack[index],
-                                Q_lengths=self.c_response_len, K_lengths=c_t_turn_length)
+                                Q_lengths=self._response_len, K_lengths=c_t_turn_length)
 
                     c_t_a_r_stack.append(c_t_a_r)
                     c_r_a_t_stack.append(c_r_a_t)
@@ -171,40 +171,40 @@ class Net(object):
 
             # -------------------- Matching Model Model ------------------- #
             #self.init = tf.global_variables_initializer()
-            self.m_word_embedding = tf.get_variable(
-                name='m_word_embedding',
+            '''self.word_embedding = tf.get_variable(
+                name='word_embedding',
                 shape=[self._conf['vocab_size'] + 1, self._conf['emb_size']],
                 dtype=tf.float32,
-                initializer=word_embedding_initializer)
+                initializer=word_embedding_initializer)'''
 
             # define placehloders
-            self.m_turns = tf.placeholder(
+            '''self._turns = tf.placeholder(
                 tf.int32,
-                shape=[self._conf["batch_size"], self._conf["max_turn_num"], self._conf["max_turn_len"]])
+                shape=[self._conf["batch_size"], self._conf["max_turn_num"], self._conf["max_turn_len"]])'''
 
-            self.m_tt_turns_len = tf.placeholder(
+            '''self._tt_turns_len = tf.placeholder(
                 tf.int32,
                 shape=[self._conf["batch_size"]])
 
-            self.m_every_turn_len = tf.placeholder(
+            self._every_turn_len = tf.placeholder(
                 tf.int32,
                 shape=[self._conf["batch_size"], self._conf["max_turn_num"]])
 
-            self.m_response = tf.placeholder(
+            self._response = tf.placeholder(
                 tf.int32,
                 shape=[self._conf["batch_size"], self._conf["max_turn_len"]])
 
-            self.m_response_len = tf.placeholder(
+            self._response_len = tf.placeholder(
                 tf.int32,
                 shape=[self._conf["batch_size"]])
 
-            self.m_label = tf.placeholder(
+            self._label = tf.placeholder(
                 tf.float32,
-                shape=[self._conf["batch_size"]])
+                shape=[self._conf["batch_size"]])'''
 
             # define operations
             # response part
-            m_Hr = tf.nn.embedding_lookup(self.m_word_embedding, self.m_response)
+            m_Hr = tf.nn.embedding_lookup(self.word_embedding, self._response)
 
             if self._conf['is_positional'] and self._conf['stack_num'] > 0:
                 with tf.variable_scope('m_positional'):
@@ -215,18 +215,18 @@ class Net(object):
                 with tf.variable_scope('m_self_stack_' + str(index)):
                     m_Hr = layers.block(
                         m_Hr, m_Hr, m_Hr,
-                        Q_lengths=self.m_response_len, K_lengths=self.m_response_len)
+                        Q_lengths=self._response_len, K_lengths=self._response_len)
                     m_Hr_stack.append(m_Hr)
 
             # context part
             # a list of length max_turn_num, every element is a tensor with shape [batch, max_turn_len]
-            m_list_turn_t = tf.unstack(self.m_turns, axis=1)
-            m_list_turn_length = tf.unstack(self.m_every_turn_len, axis=1)
+            m_list_turn_t = tf.unstack(self._turns, axis=1)
+            m_list_turn_length = tf.unstack(self._every_turn_len, axis=1)
 
             m_sim_turns = []
             # for every turn_t calculate matching vector
             for m_turn_t, m_t_turn_length in zip(m_list_turn_t, m_list_turn_length):
-                m_Hu = tf.nn.embedding_lookup(self.m_word_embedding, m_turn_t)  # [batch, max_turn_len, emb_size]
+                m_Hu = tf.nn.embedding_lookup(self.word_embedding, m_turn_t)  # [batch, max_turn_len, emb_size]
 
                 if self._conf['is_positional'] and self._conf['stack_num'] > 0:
                     with tf.variable_scope('m_positional', reuse=True):
@@ -249,23 +249,23 @@ class Net(object):
                         try:
                             m_t_a_r = layers.block(
                                 m_Hu_stack[index], m_Hr_stack[index], m_Hr_stack[index],
-                                Q_lengths=m_t_turn_length, K_lengths=self.m_response_len)
+                                Q_lengths=m_t_turn_length, K_lengths=self._response_len)
                         except ValueError:
                             tf.get_variable_scope().reuse_variables()
                             m_t_a_r = layers.block(
                                 m_Hu_stack[index], m_Hr_stack[index], m_Hr_stack[index],
-                                Q_lengths=m_t_turn_length, K_lengths=self.m_response_len)
+                                Q_lengths=m_t_turn_length, K_lengths=self._response_len)
 
                     with tf.variable_scope('m_r_attend_t_' + str(index)):
                         try:
                             m_r_a_t = layers.block(
                                 m_Hr_stack[index], m_Hu_stack[index], m_Hu_stack[index],
-                                Q_lengths=self.m_response_len, K_lengths=m_t_turn_length)
+                                Q_lengths=self._response_len, K_lengths=m_t_turn_length)
                         except ValueError:
                             tf.get_variable_scope().reuse_variables()
                             m_r_a_t = layers.block(
                                 m_Hr_stack[index], m_Hu_stack[index], m_Hu_stack[index],
-                                Q_lengths=self.m_response_len, K_lengths=m_t_turn_length)
+                                Q_lengths=self._response_len, K_lengths=m_t_turn_length)
 
                     m_t_a_r_stack.append(m_t_a_r)
                     m_r_a_t_stack.append(m_r_a_t)
@@ -294,7 +294,7 @@ class Net(object):
 
             # loss and train
             with tf.variable_scope('c_loss'):
-                self.c_loss, self.c_logits, self.c_y_pred = layers.loss(c_final_info, self.c_label)
+                self.c_loss, self.c_logits, self.c_y_pred = layers.loss(c_final_info, self._label)
                 self.c_gumbel_softmax = gumbel_softmax(self.c_logits, hard=False)
                 self.c_gumbel_softmax_label = gumbel_softmax(self.c_logits, hard=True)
                 self.c_global_step = tf.Variable(0, trainable=False)
@@ -341,7 +341,7 @@ class Net(object):
 
             with tf.variable_scope('m_loss'):
                 #self.b = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: tf.constant(10), lambda: tf.constant(0))
-                target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self.c_label, lambda: self.c_gumbel_softmax[:, -1])
+                target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label, lambda: self.c_gumbel_softmax[:, -1])
                 self.m_loss, self.m_logits, self.m_y_pred = layers.loss(m_final_info, target_label)
 
                 self.m_gumbel_softmax = gumbel_softmax(self.m_logits, hard=False)

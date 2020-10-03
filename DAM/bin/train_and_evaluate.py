@@ -32,12 +32,12 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
                 _model.is_pretrain_calibration: True,
                 _model.is_pretrain_matching: False,
                 _model.is_joint_learning: False,
-                _model.c_turns: train_batches["turns"][batch_index],
-                _model.c_tt_turns_len: train_batches["tt_turns_len"][batch_index],
-                _model.c_every_turn_len: train_batches["every_turn_len"][batch_index],
-                _model.c_response: train_batches["response"][batch_index],
-                _model.c_response_len: train_batches["response_len"][batch_index],
-                _model.c_label: train_batches["label"][batch_index]
+                _model._turns: train_batches["turns"][batch_index],
+                _model._tt_turns_len: train_batches["tt_turns_len"][batch_index],
+                _model._every_turn_len: train_batches["every_turn_len"][batch_index],
+                _model._response: train_batches["response"][batch_index],
+                _model._response_len: train_batches["response_len"][batch_index],
+                _model._label: train_batches["label"][batch_index]
             }
 
             _, _curr_loss, _logits, _y_pred = _sess.run([_model.c_g_updates, _model.c_loss, _model.c_logits, _model.c_y_pred], feed_dict=_feed)
@@ -60,12 +60,12 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
                         _model.is_pretrain_calibration: True,
                         _model.is_pretrain_matching: False,
                         _model.is_joint_learning: False,
-                        _model.c_turns: dev_batches["turns"][batch_index],
-                        _model.c_tt_turns_len: dev_batches["tt_turns_len"][batch_index],
-                        _model.c_every_turn_len: dev_batches["every_turn_len"][batch_index],
-                        _model.c_response: dev_batches["response"][batch_index],
-                        _model.c_response_len: dev_batches["response_len"][batch_index],
-                        _model.c_label: dev_batches["label"][batch_index]
+                        _model._turns: dev_batches["turns"][batch_index],
+                        _model._tt_turns_len: dev_batches["tt_turns_len"][batch_index],
+                        _model._every_turn_len: dev_batches["every_turn_len"][batch_index],
+                        _model._response: dev_batches["response"][batch_index],
+                        _model._response_len: dev_batches["response_len"][batch_index],
+                        _model._label: dev_batches["label"][batch_index]
                     }
 
                     _, _y_pred = _sess.run([_model.c_logits, _model.c_y_pred], feed_dict=_feed)
@@ -103,18 +103,12 @@ def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
                 _model.is_pretrain_calibration: False,
                 _model.is_pretrain_matching: True,
                 _model.is_joint_learning: False,
-                _model.c_turns: train_batches["turns"][batch_index],
-                _model.c_tt_turns_len: train_batches["tt_turns_len"][batch_index],
-                _model.c_every_turn_len: train_batches["every_turn_len"][batch_index],
-                _model.c_response: train_batches["response"][batch_index],
-                _model.c_response_len: train_batches["response_len"][batch_index],
-                _model.c_label: train_batches["label"][batch_index],
-                _model.m_turns: train_batches["turns"][batch_index],
-                _model.m_tt_turns_len: train_batches["tt_turns_len"][batch_index],
-                _model.m_every_turn_len: train_batches["every_turn_len"][batch_index],
-                _model.m_response: train_batches["response"][batch_index],
-                _model.m_response_len: train_batches["response_len"][batch_index],
-                _model.m_label: train_batches["label"][batch_index]
+                _model._turns: train_batches["turns"][batch_index],
+                _model._tt_turns_len: train_batches["tt_turns_len"][batch_index],
+                _model._every_turn_len: train_batches["every_turn_len"][batch_index],
+                _model._response: train_batches["response"][batch_index],
+                _model._response_len: train_batches["response_len"][batch_index],
+                _model._label: train_batches["label"][batch_index]
             }
 
             _, _curr_loss, _logits, _y_pred = _sess.run([_model.m_g_updates, _model.m_loss, _model.m_logits, _model.m_y_pred], feed_dict=_feed)
@@ -134,21 +128,15 @@ def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
                 print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + ' - save step: %s' % index)
                 for batch_index in xrange(dev_batch_num):
                     _feed = {
-                        _model.c_turns: dev_batches["turns"][batch_index],
-                        _model.c_tt_turns_len: dev_batches["tt_turns_len"][batch_index],
-                        _model.c_every_turn_len: dev_batches["every_turn_len"][batch_index],
-                        _model.c_response: dev_batches["response"][batch_index],
-                        _model.c_response_len: dev_batches["response_len"][batch_index],
-                        _model.c_label: dev_batches["label"][batch_index],
                         _model.is_pretrain_calibration: False,
                         _model.is_pretrain_matching: True,
                         _model.is_joint_learning: False,
-                        _model.m_turns: dev_batches["turns"][batch_index],
-                        _model.m_tt_turns_len: dev_batches["tt_turns_len"][batch_index],
-                        _model.m_every_turn_len: dev_batches["every_turn_len"][batch_index],
-                        _model.m_response: dev_batches["response"][batch_index],
-                        _model.m_response_len: dev_batches["response_len"][batch_index],
-                        _model.m_label: dev_batches["label"][batch_index]
+                        _model._turns: dev_batches["turns"][batch_index],
+                        _model._tt_turns_len: dev_batches["tt_turns_len"][batch_index],
+                        _model._every_turn_len: dev_batches["every_turn_len"][batch_index],
+                        _model._response: dev_batches["response"][batch_index],
+                        _model._response_len: dev_batches["response_len"][batch_index],
+                        _model._label: dev_batches["label"][batch_index]
                     }
 
                     _, _y_pred = _sess.run([_model.m_logits, _model.m_y_pred], feed_dict=_feed)
@@ -225,7 +213,7 @@ def train(conf, _model):
 
         # Indicators
         c_average_m_loss, c_average_c_loss, m_average_m_loss, m_average_c_loss, average_correction_rate, step, best_result = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-
+        c_summaries, m_summaries = None, None
         for epoch in xrange(conf["num_scan_data"]):
             print('starting shuffle train data')
             shuffle_train = reader.unison_shuffle(train_data)
@@ -238,18 +226,12 @@ def train(conf, _model):
                     _model.is_pretrain_calibration: False,
                     _model.is_pretrain_matching: False,
                     _model.is_joint_learning: True,
-                    _model.c_turns: train_batches["turns"][batch_index],
-                    _model.c_tt_turns_len: train_batches["tt_turns_len"][batch_index],
-                    _model.c_every_turn_len: train_batches["every_turn_len"][batch_index],
-                    _model.c_response: train_batches["response"][batch_index],
-                    _model.c_response_len: train_batches["response_len"][batch_index],
-                    _model.c_label: train_batches["label"][batch_index],
-                    _model.m_turns: train_batches["turns"][batch_index],
-                    _model.m_tt_turns_len: train_batches["tt_turns_len"][batch_index],
-                    _model.m_every_turn_len: train_batches["every_turn_len"][batch_index],
-                    _model.m_response: train_batches["response"][batch_index],
-                    _model.m_response_len: train_batches["response_len"][batch_index],
-                    _model.m_label: train_batches["label"][batch_index]
+                    _model._turns: train_batches["turns"][batch_index],
+                    _model._tt_turns_len: train_batches["tt_turns_len"][batch_index],
+                    _model._every_turn_len: train_batches["every_turn_len"][batch_index],
+                    _model._response: train_batches["response"][batch_index],
+                    _model._response_len: train_batches["response_len"][batch_index],
+                    _model._label: train_batches["label"][batch_index]
                 }
 
                 c_loss_summary = tf.summary.scalar("train/matching_opt/c_loss", _model.c_loss)
@@ -278,18 +260,12 @@ def train(conf, _model):
                         _model.is_pretrain_calibration: False,
                         _model.is_pretrain_matching: False,
                         _model.is_joint_learning: True,
-                        _model.c_turns: validation_batches["turns"][validation_batch_index],
-                        _model.c_tt_turns_len: validation_batches["tt_turns_len"][validation_batch_index],
-                        _model.c_every_turn_len: validation_batches["every_turn_len"][validation_batch_index],
-                        _model.c_response: validation_batches["response"][validation_batch_index],
-                        _model.c_response_len: validation_batches["response_len"][validation_batch_index],
-                        _model.c_label: validation_batches["label"][validation_batch_index],
-                        _model.m_turns: validation_batches["turns"][validation_batch_index],
-                        _model.m_tt_turns_len: validation_batches["tt_turns_len"][validation_batch_index],
-                        _model.m_every_turn_len: validation_batches["every_turn_len"][validation_batch_index],
-                        _model.m_response: validation_batches["response"][validation_batch_index],
-                        _model.m_response_len: validation_batches["response_len"][validation_batch_index],
-                        _model.m_label: validation_batches["label"][validation_batch_index]
+                        _model._turns: validation_batches["turns"][validation_batch_index],
+                        _model._tt_turns_len: validation_batches["tt_turns_len"][validation_batch_index],
+                        _model._every_turn_len: validation_batches["every_turn_len"][validation_batch_index],
+                        _model._response: validation_batches["response"][validation_batch_index],
+                        _model._response_len: validation_batches["response_len"][validation_batch_index],
+                        _model._label: validation_batches["label"][validation_batch_index]
                     }
 
                     c_loss_summary = tf.summary.scalar("train/calibration_opt/c_loss", _model.c_loss)
@@ -316,8 +292,10 @@ def train(conf, _model):
                     print("[Calibration Model Optimisation] - step: " + str(c_g_step) + ", lr: " + str(c_lr) +", c_loss: [" + str(c_average_c_loss) + "] m_loss: [" + str(c_average_m_loss) + "]")
                     print('='*37)
                     c_average_m_loss, c_average_c_loss, m_average_m_loss, m_average_c_loss, average_correction_rate = 0.0, 0.0, 0.0, 0.0, 0.0
-                    train_summary_writer.add_summary(m_summaries, step)
-                    train_summary_writer.add_summary(c_summaries, step)
+                    if m_summaries:
+                        train_summary_writer.add_summary(m_summaries, step)
+                    if c_summaries:
+                        train_summary_writer.add_summary(c_summaries, step)
 
                 if step % conf["save_step"] == 0 and step > 0:
                     index = step / conf['save_step']
@@ -330,18 +308,12 @@ def train(conf, _model):
                             _model.is_pretrain_calibration: False,
                             _model.is_pretrain_matching: False,
                             _model.is_joint_learning: True,
-                            _model.c_turns: dev_batches["turns"][batch_index],
-                            _model.c_tt_turns_len: dev_batches["tt_turns_len"][batch_index],
-                            _model.c_every_turn_len: dev_batches["every_turn_len"][batch_index],
-                            _model.c_response: dev_batches["response"][batch_index],
-                            _model.c_response_len: dev_batches["response_len"][batch_index],
-                            _model.c_label: dev_batches["label"][batch_index],
-                            _model.m_turns: dev_batches["turns"][batch_index],
-                            _model.m_tt_turns_len: dev_batches["tt_turns_len"][batch_index],
-                            _model.m_every_turn_len: dev_batches["every_turn_len"][batch_index],
-                            _model.m_response: dev_batches["response"][batch_index],
-                            _model.m_response_len: dev_batches["response_len"][batch_index],
-                            _model.m_label: dev_batches["label"][batch_index]
+                            _model._turns: dev_batches["turns"][batch_index],
+                            _model._tt_turns_len: dev_batches["tt_turns_len"][batch_index],
+                            _model._every_turn_len: dev_batches["every_turn_len"][batch_index],
+                            _model._response: dev_batches["response"][batch_index],
+                            _model._response_len: dev_batches["response_len"][batch_index],
+                            _model._label: dev_batches["label"][batch_index]
                         }
 
                         c_logits, c_y_pred, m_logits, m_y_pred, c_gumbel_softmax = _sess.run(
