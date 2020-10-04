@@ -73,6 +73,7 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
                     _y_pred_list.extend(list(_y_pred[:,-1]))
                 # write evaluation result
                 result = eva.evaluate_auc(_y_pred_list, label_list)
+                print('[Pretrain Calibration] Epoch %d - Accuracy: %.3f' % (epoch, result))
                 if result > best_result:
                     best_result = result
                     save_path = _model.saver.save(_sess, conf["save_path"] + "pretrain_calibration_model.ckpt." + str(
@@ -144,6 +145,7 @@ def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
                     _y_pred_list.extend(list(_y_pred[:,-1]))
                 # write evaluation result
                 result = eva.evaluate_auc(_y_pred_list, label_list)
+                print('[Pretrain Matching] Epoch %d - Accuracy: %.3f' % (epoch, result))
                 if result > best_result:
                     best_result = result
                     save_path = _model.saver.save(_sess, conf["save_path"] + "pretrain_matching_model.ckpt." + str(
