@@ -7,7 +7,7 @@ import tensorflow as tf
 import numpy as np
 
 import utils.reader as reader
-import utils.douban_evaluation as eva
+import utils.evaluation as eva
 
 
 def test(conf, _model):
@@ -18,7 +18,7 @@ def test(conf, _model):
     # load data
     print('starting loading data')
     print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())))
-    train_data, val_data, test_data = pickle.load(open(conf["data_path"], 'rb'))    
+    train_data, val_data, test_data, _ = pickle.load(open(conf["data_path"], 'rb'))
     print('finish loading data')
 
     test_batches = reader.build_batches(test_data, conf)
@@ -71,15 +71,5 @@ def test(conf, _model):
         print('finish test')
         print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())))
 
-        
-        #write evaluation result
-        result = eva.evaluate(score_file_path)
-        result_file_path = conf["save_path"] + "result.test"
-        with open(result_file_path, 'w') as out_file:
-            for p_at in result:
-                out_file.write(str(p_at) + '\n')
-        print('finish evaluation')
-        print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())))
-        
 
                     

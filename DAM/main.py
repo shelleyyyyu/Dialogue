@@ -36,8 +36,8 @@ conf = {
     "attention_type": "dot",
 
     "learning_rate": 1e-3,
-    "vocab_size": 434512,
     "batch_size": 256, #200 for test
+    "vocab_size": 256358,
     "emb_size": 80,
 
     "max_turn_num": 1,

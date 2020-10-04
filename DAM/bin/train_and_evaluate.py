@@ -21,7 +21,7 @@ def train(conf, _model):
     # load data
     print('starting loading data')
     print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())))
-    train_data, val_data, test_data = pickle.load(open(conf["data_path"], 'rb'))    
+    train_data, val_data, test_data, _ = pickle.load(open(conf["data_path"], 'rb'))
     print('finish loading data')
     print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())))
 
@@ -56,9 +56,10 @@ def train(conf, _model):
         average_loss = 0.0
         batch_index = 0
         step = 0
-        best_result = [0, 0, 0, 0]
+        best_result = 0.0
+        _y_pred_list, label_list = [], []
 
-        for step_i in xrange(conf["num_scan_data"]):
+        for epoch in xrange(conf["num_scan_data"]):
             #for batch_index in rng.permutation(range(batch_num)):
             print('starting shuffle train data')
             shuffle_train = reader.unison_shuffle(train_data)
@@ -93,8 +94,8 @@ def train(conf, _model):
                 
                 if step % conf["save_step"] == 0 and step > 0:
                     index = step / conf['save_step']
-                    score_file_path = conf['save_path'] + 'score.' + str(index)
-                    score_file = open(score_file_path, 'w')
+                    #score_file_path = conf['save_path'] + 'score.' + str(index)
+                    #score_file = open(score_file_path, 'w')
                     print('save step: %s' %index)
                     print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())))
 
@@ -111,22 +112,21 @@ def train(conf, _model):
                 
                         scores, y_pred = sess.run([_model.logits, _model.y_pred], feed_dict = feed)
 
-                        for i in xrange(conf["batch_size"]):
-                            score_file.write(
-                                str(y_pred[i][-1]) + '\t' +
-                                str(val_batches["label"][batch_index][i]) + '\n')
-                    score_file.close()
+                        #for i in xrange(conf["batch_size"]):
+                        #    score_file.write(
+                        #        str(y_pred[i][-1]) + '\t' +
+                        #        str(val_batches["label"][batch_index][i]) + '\n')
+                        label_list.extend(val_batches["label"][batch_index])
+                        _y_pred_list.extend(list(y_pred[:, -1]))
+                    #score_file.close()
 
                     #write evaluation result
-                    result = eva.evaluate(score_file_path)
+                    result = eva.evaluate_auc(_y_pred_list, label_list)
                     result_file_path = conf["save_path"] + "result." + str(index)
-                    with open(result_file_path, 'w') as out_file:
-                        for p_at in result:
-                            out_file.write(str(p_at) + '\n')
-                    print('finish evaluation')
+                    print('Epoch %d - Accuracy: %.3f' % (epoch, result))
                     print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())))
 
-                    if result[1] + result[2] > best_result[1] + best_result[2]:
+                    if result > best_result:
                         best_result = result
                         _save_path = _model.saver.save(sess, conf["save_path"] + "model.ckpt." + str(step / conf["save_step"]))
                         print("succ saving model in " + _save_path)
