@@ -48,7 +48,7 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
             if step % conf["print_step"] == 0 and step > 0:
                 _g_step, _lr = _sess.run([_model.c_global_step, _model.c_learning_rate])
                 print('Pretrain Calibration Model - step: %s, lr: %s' % (_g_step, _lr))
-                print("processed: [" + str(step * 1.0 / batch_num) + "] loss: [" + str(average_loss / conf["print_step"]) + ']')
+                print("processed: [%.4f] loss [%.4f]" %(float(step * 1.0 / batch_num), float(average_loss / conf["print_step"])))
                 average_loss = 0
             if step % conf["save_step"] == 0 and step > 0:
                 _y_pred_list = []
@@ -77,7 +77,7 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
                     best_result = result
                     save_path = _model.saver.save(_sess, conf["save_path"] + "pretrain_calibration_model.ckpt." + str(
                         step / conf["save_step"]))
-                    _pretrain_update_model_save_name = "pretrain_calibration_model.ckpt." + str(step / conf["save_step"])
+                    _pretrain_update_model_save_name = "pretrain_calibration_model.ckpt." + str(int(step / conf["save_step"]))
                     print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + " - success saving model - " + _pretrain_update_model_save_name + " - in " + save_path)
     return _model, _pretrain_update_model_save_name
 
@@ -119,7 +119,7 @@ def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
             if step % conf["print_step"] == 0 and step > 0:
                 _g_step, _lr = _sess.run([_model.m_global_step, _model.m_learning_rate])
                 print('Pretrain Matching Model - step: %s, lr: %s' % (_g_step, _lr))
-                print("processed: [" + str(step * 1.0 / batch_num) + "] loss: [" + str(average_loss / conf["print_step"]) + ']')
+                print("processed: [%.4f] loss [%.4f]" %(float(step * 1.0 / batch_num), float(average_loss / conf["print_step"])))
                 average_loss = 0
             if step % conf["save_step"] == 0 and step > 0:
                 _y_pred_list = []
@@ -148,7 +148,7 @@ def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
                     best_result = result
                     save_path = _model.saver.save(_sess, conf["save_path"] + "pretrain_matching_model.ckpt." + str(
                         step / conf["save_step"]))
-                    _pretrain_update_model_save_name = "pretrain_matching_model.ckpt." + str(step / conf["save_step"])
+                    _pretrain_update_model_save_name = "pretrain_matching_model.ckpt." + str(int(step / conf["save_step"]))
                     print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + " - success saving model - " + _pretrain_update_model_save_name + " - in " + save_path)
     return _model, _pretrain_update_model_save_name
 
@@ -246,7 +246,7 @@ def train(conf, _model):
                 m_average_m_loss += m_curr_loss
                 m_average_c_loss += c_curr_loss
 
-                batch_index = (batch_index + 1) % batch_num
+                #batch_index = (batch_index + 1) % batch_num
 
                 # -------------------- Calibration Model Optimisation ------------------- #
                 for validation_batch_index in xrange(validation_batch_num):
@@ -281,9 +281,9 @@ def train(conf, _model):
                 if step % conf["print_step"] == 0 and step > 0:
                     c_g_step, c_lr = _sess.run([_model.c_global_step, _model.c_learning_rate])
                     m_g_step, m_lr = _sess.run([_model.m_global_step, _model.m_learning_rate])
-                    print('='*10 + "processed: [" + str(step * 1.0 / batch_num) + "]" + '='*10)
-                    print("[Matching Model Optimisation] - step: " + str(m_g_step) + ", lr: " + str(m_lr) +", c_loss: [" + str(m_average_c_loss / conf["print_step"]) + "] m_loss: [" + str(m_average_m_loss / conf["print_step"]) + "]")
-                    print("[Calibration Model Optimisation] - step: " + str(c_g_step) + ", lr: " + str(c_lr) +", c_loss: [" + str(c_average_c_loss) + "] m_loss: [" + str(c_average_m_loss) + "]")
+                    print("processed: [%.4f]" % (float(step * 1.0 / batch_num)))
+                    print("[Matching Model Optimisation] - step: %d , lr: %f , c_loss: [%.4f] m_loss: [%.4f]" %(m_g_step, m_lr, (m_average_c_loss / conf["print_step"]), (m_average_m_loss / conf["print_step"])))
+                    print("[Calibration Model Optimisation] - step: %d , lr: %f , c_loss: [%.4f] m_loss: [%.4f]" %(c_g_step, c_lr, (c_average_c_loss / validation_batch_num), (c_average_m_loss / validation_batch_num)))
                     c_average_m_loss, c_average_c_loss, m_average_m_loss, m_average_c_loss, average_correction_rate = 0.0, 0.0, 0.0, 0.0, 0.0
                     #if m_summaries:
                     #    train_summary_writer.add_summary(m_summaries, step)
@@ -326,7 +326,7 @@ def train(conf, _model):
                     print('Epoch %d - Accuracy: %.3f' %(epoch, result))
                     if result > best_result:
                         best_result = result
-                        save_path = _model.saver.save(_sess, conf["save_path"] + "joint_learning_model.ckpt." + str(step / conf["save_step"]))
+                        save_path = _model.saver.save(_sess, conf["save_path"] + "joint_learning_model.ckpt." + str(int((step / conf["save_step"]))))
                         print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + " - finish evaluation - success saving model in " + save_path)
 
                 
