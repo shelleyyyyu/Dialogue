@@ -18,10 +18,8 @@ import bin.test_and_evaluate as test
 
 conf = {
     "data_path": "./data/jdqa/data.pkl",
-    "c_save_path": "./output/jdqa/calibration/",
-    "m_save_path": "./output/jdqa/matching/",
-    "j_save_path": "./output/jdqa/joint/",
     "word_emb_init": './data/jdqa/word_embedding.pkl',
+    "save_path": "./output/jdqa/joint/",
     "init_model": None, #should be set for test
 
     "rand_seed": None, 
@@ -45,12 +43,12 @@ conf = {
     "max_turn_len": 30,
 
     "max_to_keep": 1,
-    "num_scan_data": 1,
+    "num_scan_data": 5,
     "_EOS_": 1, #1 for douban data; 28270 for ubuntu
     "final_n_class": 1,
 
-    "matching_pretrain_epoch": 2,
-    "calibration_pretrain_epoch": 2,
+    "matching_pretrain_epoch": 1,
+    "calibration_pretrain_epoch": 1,
     "matching_pretrain_model_save_name": 'm',
     "calibration_pretrain_model_save_name": 'c',
 }
