@@ -75,10 +75,10 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
                 result = eva.evaluate_auc(_y_pred_list, label_list)
                 if result > best_result:
                     best_result = result
-                    _save_path = _model.saver.save(_sess, conf["c_save_path"] + "pretrain_calibration_model.ckpt." + str(
+                    save_path = _model.saver.save(_sess, conf["save_path"] + "pretrain_calibration_model.ckpt." + str(
                         step / conf["save_step"]))
                     _pretrain_update_model_save_name = "pretrain_calibration_model.ckpt." + str(step / conf["save_step"])
-                    print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + " - success saving model - " + _pretrain_update_model_save_name + " - in " + _save_path)
+                    print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + " - success saving model - " + _pretrain_update_model_save_name + " - in " + save_path)
     return _model, _pretrain_update_model_save_name
 
 def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
@@ -146,10 +146,10 @@ def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
                 result = eva.evaluate_auc(_y_pred_list, label_list)
                 if result > best_result:
                     best_result = result
-                    _save_path = _model.saver.save(_sess, conf["m_save_path"] + "pretrain_matching_model.ckpt." + str(
+                    save_path = _model.saver.save(_sess, conf["save_path"] + "pretrain_matching_model.ckpt." + str(
                         step / conf["save_step"]))
                     _pretrain_update_model_save_name = "pretrain_matching_model.ckpt." + str(step / conf["save_step"])
-                    print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + " - success saving model - " + _pretrain_update_model_save_name + " - in " + _save_path)
+                    print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + " - success saving model - " + _pretrain_update_model_save_name + " - in " + save_path)
     return _model, _pretrain_update_model_save_name
 
 def train(conf, _model):
@@ -157,14 +157,8 @@ def train(conf, _model):
     if conf['rand_seed'] is not None:
         np.random.seed(conf['rand_seed'])
 
-    if not os.path.exists(conf['c_save_path']):
-        os.makedirs(conf['c_save_path'])
-
-    if not os.path.exists(conf['m_save_path']):
-        os.makedirs(conf['m_save_path'])
-
-    if not os.path.exists(conf['j_save_path']):
-        os.makedirs(conf['j_save_path'])
+    if not os.path.exists(conf['save_path']):
+        os.makedirs(conf['save_path'])
 
     # load data
     #print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - start loading data')
@@ -183,9 +177,9 @@ def train(conf, _model):
 
     _graph = _model.build_graph()
     #print(str(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))) + ' - build model graph success')
-    tensorboard_data = './log/DAM_JDQA'
+    #tensorboard_data = './log/DAM_JDQA'
     with tf.Session(graph=_graph) as _sess:
-        train_summary_writer = tf.summary.FileWriter(tensorboard_data, _sess._graph)
+        #train_summary_writer = tf.summary.FileWriter(tensorboard_data, _sess._graph)
         tf.global_variables_initializer().run()
 
         if conf["init_model"] is not None:
@@ -213,7 +207,7 @@ def train(conf, _model):
 
         # Indicators
         c_average_m_loss, c_average_c_loss, m_average_m_loss, m_average_c_loss, average_correction_rate, step, best_result = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-        c_summaries, m_summaries = None, None
+        #c_summaries, m_summaries = None, None
         for epoch in xrange(conf["num_scan_data"]):
             print('starting shuffle train data')
             shuffle_train = reader.unison_shuffle(train_data)
@@ -234,21 +228,21 @@ def train(conf, _model):
                     _model._label: train_batches["label"][batch_index]
                 }
 
-                c_loss_summary = tf.summary.scalar("train/matching_opt/c_loss", _model.c_loss)
-                m_loss_summary = tf.summary.scalar("train/matching_opt/m_loss", _model.m_loss)
-                train_summary_m_op = tf.summary.merge([c_loss_summary, m_loss_summary])
+                #c_loss_summary = tf.summary.scalar("train/matching_opt/c_loss", _model.c_loss)
+                #m_loss_summary = tf.summary.scalar("train/matching_opt/m_loss", _model.m_loss)
+                #train_summary_m_op = tf.summary.merge([c_loss_summary, m_loss_summary])
 
-                m_target_var_name, m_summaries, c_curr_loss, c_logits, c_y_pred, c_gumbel_softmax , m_g_updates, m_curr_loss, m_logits, m_y_pred = \
-                    _sess.run([_model.m_target_var_names, train_summary_m_op, _model.c_loss, _model.c_logits, _model.c_y_pred,
+                m_target_var_name, c_curr_loss, c_logits, c_y_pred, c_gumbel_softmax , m_g_updates, m_curr_loss, m_logits, m_y_pred = \
+                    _sess.run([_model.m_target_var_names, _model.c_loss, _model.c_logits, _model.c_y_pred,
                                _model.c_gumbel_softmax, _model.m_g_updates, _model.m_loss,
                                _model.m_logits, _model.m_y_pred], feed_dict=_feed)
 
                 #if batch_index == 0:
                 #    print('[1st Step] Length of optimised variables: %d' %len(m_target_var_name))
-                calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_gumbel_softmax]
-                calibrated_rate = 1 - accuracy_score(calibrated_label, train_batches["label"][batch_index])
+                #calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_gumbel_softmax]
+                #calibrated_rate = 1 - accuracy_score(calibrated_label, train_batches["label"][batch_index])
 
-                average_correction_rate += calibrated_rate
+                #average_correction_rate += calibrated_rate
                 m_average_m_loss += m_curr_loss
                 m_average_c_loss += c_curr_loss
 
@@ -268,12 +262,12 @@ def train(conf, _model):
                         _model._label: validation_batches["label"][validation_batch_index]
                     }
 
-                    c_loss_summary = tf.summary.scalar("train/calibration_opt/c_loss", _model.c_loss)
-                    m_loss_summary = tf.summary.scalar("train/calibration_opt/m_loss", _model.m_loss)
-                    train_summary_c_op = tf.summary.merge([c_loss_summary, m_loss_summary])
+                    #c_loss_summary = tf.summary.scalar("train/calibration_opt/c_loss", _model.c_loss)
+                    #m_loss_summary = tf.summary.scalar("train/calibration_opt/m_loss", _model.m_loss)
+                    #train_summary_c_op = tf.summary.merge([c_loss_summary, m_loss_summary])
 
-                    c_target_var_names, c_summaries, c_curr_loss, c_logits, c_y_pred, c_gumbel_softmax, c_g_updates, m_curr_loss, m_logits, m_y_pred = \
-                        _sess.run([_model.c_target_var_names, train_summary_c_op, _model.c_loss,
+                    c_target_var_names, c_curr_loss, c_logits, c_y_pred, c_gumbel_softmax, c_g_updates, m_curr_loss, m_logits, m_y_pred = \
+                        _sess.run([_model.c_target_var_names, _model.c_loss,
                                    _model.c_logits, _model.c_y_pred, _model.c_gumbel_softmax,
                                    _model.c_g_updates, _model.m_loss, _model.m_logits, _model.m_y_pred],
                                   feed_dict=_feed)
@@ -288,13 +282,13 @@ def train(conf, _model):
                     c_g_step, c_lr = _sess.run([_model.c_global_step, _model.c_learning_rate])
                     m_g_step, m_lr = _sess.run([_model.m_global_step, _model.m_learning_rate])
                     print('='*10 + "processed: [" + str(step * 1.0 / batch_num) + "]" + '='*10)
-                    print("[Matching Model Optimisation] - step: " + str(m_g_step) + ", lr: " + str(m_lr) +", c_loss: [" + str(m_average_c_loss / conf["print_step"]) + "] m_loss: [" + str(m_average_m_loss / conf["print_step"]) + "] calibrated_rate: [" + '%.4f'%(average_correction_rate / conf["print_step"]) + ']')
+                    print("[Matching Model Optimisation] - step: " + str(m_g_step) + ", lr: " + str(m_lr) +", c_loss: [" + str(m_average_c_loss / conf["print_step"]) + "] m_loss: [" + str(m_average_m_loss / conf["print_step"]) + "]")
                     print("[Calibration Model Optimisation] - step: " + str(c_g_step) + ", lr: " + str(c_lr) +", c_loss: [" + str(c_average_c_loss) + "] m_loss: [" + str(c_average_m_loss) + "]")
                     c_average_m_loss, c_average_c_loss, m_average_m_loss, m_average_c_loss, average_correction_rate = 0.0, 0.0, 0.0, 0.0, 0.0
-                    if m_summaries:
-                        train_summary_writer.add_summary(m_summaries, step)
-                    if c_summaries:
-                        train_summary_writer.add_summary(c_summaries, step)
+                    #if m_summaries:
+                    #    train_summary_writer.add_summary(m_summaries, step)
+                    #if c_summaries:
+                    #    train_summary_writer.add_summary(c_summaries, step)
 
                 if step % conf["save_step"] == 0 and step > 0:
                     index = step / conf['save_step']
@@ -325,15 +319,15 @@ def train(conf, _model):
 
                         label_list.extend(dev_batches["label"][batch_index])
                         _y_pred_list.extend(list(m_y_pred[:, -1]))
-                        batch_index = (batch_index + 1) % batch_num
+                        #batch_index = (batch_index + 1) % batch_num
                         # write evaluation result
                     print('Data Calibration Rate: %.4f' % (average_correction_rate/dev_batch_num))
                     result = eva.evaluate_auc(_y_pred_list, label_list)
                     print('Epoch %d - Accuracy: %.3f' %(epoch, result))
                     if result > best_result:
                         best_result = result
-                        _save_path = _model.saver.save(_sess, conf["j_save_path"] + "joint_learning_model.ckpt." + str(step / conf["save_step"]))
-                        print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + " - finish evaluation - success saving model in " + _save_path)
+                        save_path = _model.saver.save(_sess, conf["save_path"] + "joint_learning_model.ckpt." + str(step / conf["save_step"]))
+                        print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + " - finish evaluation - success saving model in " + save_path)
 
                 
 
