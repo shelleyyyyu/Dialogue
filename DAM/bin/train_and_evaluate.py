@@ -167,22 +167,22 @@ def train(conf, _model):
         os.makedirs(conf['j_save_path'])
 
     # load data
-    print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - start loading data')
+    #print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - start loading data')
     train_data, dev_data, test_data, validation_data = pickle.load(open(conf["data_path"], 'rb'))
-    print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - finish loading data')
+    #print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - finish loading data')
 
     # load dev_batches
-    print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + " - start building dev/validation batches")
+    #print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + " - start building dev/validation batches")
     dev_batches = reader.build_batches(dev_data, conf)
     validation_batches = reader.build_batches(validation_data, conf)
-    print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + " - finish building dev/validation batches")
+    #print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + " - finish building dev/validation batches")
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - Finish Data Pre-processing')
 
     #Print configuration setting
     print('configurations: %s' %conf)
 
     _graph = _model.build_graph()
-    print(str(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))) + ' - build model graph success')
+    #print(str(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))) + ' - build model graph success')
     tensorboard_data = './log/DAM_JDQA'
     with tf.Session(graph=_graph) as _sess:
         train_summary_writer = tf.summary.FileWriter(tensorboard_data, _sess._graph)
@@ -243,8 +243,8 @@ def train(conf, _model):
                                _model.c_gumbel_softmax, _model.m_g_updates, _model.m_loss,
                                _model.m_logits, _model.m_y_pred], feed_dict=_feed)
 
-                if batch_index == 0:
-                    print('[1st Step] Length of optimised variables: %d' %len(m_target_var_name))
+                #if batch_index == 0:
+                #    print('[1st Step] Length of optimised variables: %d' %len(m_target_var_name))
                 calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_gumbel_softmax]
                 calibrated_rate = 1 - accuracy_score(calibrated_label, train_batches["label"][batch_index])
 
@@ -277,8 +277,8 @@ def train(conf, _model):
                                    _model.c_logits, _model.c_y_pred, _model.c_gumbel_softmax,
                                    _model.c_g_updates, _model.m_loss, _model.m_logits, _model.m_y_pred],
                                   feed_dict=_feed)
-                    if batch_index == 0 and validation_batch_index == 0:
-                        print('[2nd Step] Length of optimised variables: %d' % len(c_target_var_names))
+                    #if batch_index == 0 and validation_batch_index == 0:
+                    #    print('[2nd Step] Length of optimised variables: %d' % len(c_target_var_names))
                     c_average_m_loss += m_curr_loss
                     c_average_c_loss += c_curr_loss
 
@@ -290,7 +290,6 @@ def train(conf, _model):
                     print('='*10 + "processed: [" + str(step * 1.0 / batch_num) + "]" + '='*10)
                     print("[Matching Model Optimisation] - step: " + str(m_g_step) + ", lr: " + str(m_lr) +", c_loss: [" + str(m_average_c_loss / conf["print_step"]) + "] m_loss: [" + str(m_average_m_loss / conf["print_step"]) + "] calibrated_rate: [" + '%.4f'%(average_correction_rate / conf["print_step"]) + ']')
                     print("[Calibration Model Optimisation] - step: " + str(c_g_step) + ", lr: " + str(c_lr) +", c_loss: [" + str(c_average_c_loss) + "] m_loss: [" + str(c_average_m_loss) + "]")
-                    print('='*37)
                     c_average_m_loss, c_average_c_loss, m_average_m_loss, m_average_c_loss, average_correction_rate = 0.0, 0.0, 0.0, 0.0, 0.0
                     if m_summaries:
                         train_summary_writer.add_summary(m_summaries, step)
