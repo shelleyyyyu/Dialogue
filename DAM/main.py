@@ -31,7 +31,8 @@ conf = {
     "is_layer_norm": True,
     "is_positional": False,  
 
-    "stack_num": 5,
+    "stack_num": 10,
+    "c_stack_num": 10,
     "attention_type": "dot",
 
     "learning_rate": 1e-3,
