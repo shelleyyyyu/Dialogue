@@ -88,12 +88,12 @@ class Net(object):
             # response part
             c_Hr = tf.nn.embedding_lookup(self.word_embedding, self._response)
 
-            if self._conf['is_positional'] and self._conf['stack_num'] > 0:
+            if self._conf['is_positional'] and self._conf['c_stack_num'] > 0:
                 with tf.variable_scope('c_positional'):
                     c_Hr = op.positional_encoding_vector(c_Hr, max_timescale=10)
             c_Hr_stack = [c_Hr]
 
-            for index in range(self._conf['stack_num']):
+            for index in range(self._conf['c_stack_num']):
                 with tf.variable_scope('c_self_stack_' + str(index)):
                     c_Hr = layers.block(
                         c_Hr, c_Hr, c_Hr,
@@ -110,12 +110,12 @@ class Net(object):
             for c_turn_t, c_t_turn_length in zip(c_list_turn_t, c_list_turn_length):
                 c_Hu = tf.nn.embedding_lookup(self.word_embedding, c_turn_t)  # [batch, max_turn_len, emb_size]
 
-                if self._conf['is_positional'] and self._conf['stack_num'] > 0:
+                if self._conf['is_positional'] and self._conf['c_stack_num'] > 0:
                     with tf.variable_scope('c_positional', reuse=True):
                         c_Hu = op.positional_encoding_vector(c_Hu, max_timescale=10)
                 c_Hu_stack = [c_Hu]
 
-                for index in range(self._conf['stack_num']):
+                for index in range(self._conf['c_stack_num']):
                     with tf.variable_scope('c_self_stack_' + str(index), reuse=True):
                         c_Hu = layers.block(
                             c_Hu, c_Hu, c_Hu,
@@ -125,7 +125,7 @@ class Net(object):
 
                 c_r_a_t_stack = []
                 c_t_a_r_stack = []
-                for index in range(self._conf['stack_num'] + 1):
+                for index in range(self._conf['c_stack_num'] + 1):
 
                     with tf.variable_scope('c_t_attend_r_' + str(index)):
                         try:
@@ -160,7 +160,7 @@ class Net(object):
 
                 # calculate similarity matrix
                 with tf.variable_scope('c_similarity'):
-                    # sim shape [batch, max_turn_len, max_turn_len, 2*stack_num+1]
+                    # sim shape [batch, max_turn_len, max_turn_len, 2*c_stack_num+1]
                     # divide sqrt(200) to prevent gradient explosion
                     c_sim = tf.einsum('biks,bjks->bijs', c_t_a_r, c_r_a_t) / tf.sqrt(200.0)
 
@@ -315,6 +315,8 @@ class Net(object):
                 if self.calibration_type == tf.constant(0):
                     c_label = tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.float32)
                     target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label, lambda: c_label)
+                elif self.calibration_type == tf.constant(2):
+                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label,lambda: self.c_logits[:, -1])
                 else:
                     target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label,lambda: self.c_y_pred[:, -1])
 
