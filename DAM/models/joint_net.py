@@ -80,6 +80,10 @@ class Net(object):
                 tf.float32,
                 shape=[self._conf["batch_size"]])
 
+            self.calibration_type = tf.placeholder(
+                tf.int32,
+                shape=[])
+
             # define operations
             # response part
             c_Hr = tf.nn.embedding_lookup(self.word_embedding, self._response)
@@ -340,9 +344,15 @@ class Net(object):
                 self.m_vars = [var for var in self.t_vars if 'm_' in var.name]
 
             with tf.variable_scope('m_loss'):
-                #self.b = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: tf.constant(10), lambda: tf.constant(0))
-                target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label, lambda: self.c_gumbel_softmax[:, -1])
-                self.m_loss, self.m_logits, self.m_y_pred = layers.loss(m_final_info, target_label)
+                #TODO - SHEllY
+                if self.calibration_type == tf.constant(0):
+                    self.c_label = tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.float32)
+                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label, lambda: self.c_label)
+                    self.m_loss, self.m_logits, self.m_y_pred = layers.loss(m_final_info, target_label)
+                else:
+                    self.c_label = tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.float32)
+                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label,lambda: self.c_y_pred)
+                    self.m_loss, self.m_logits, self.m_y_pred = layers.loss_logits(m_final_info, target_label)
 
                 self.m_gumbel_softmax = gumbel_softmax(self.m_logits, hard=False)
                 self.m_gumbel_softmax_label = gumbel_softmax(self.m_logits, hard=True)

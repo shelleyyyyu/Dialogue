@@ -43,14 +43,14 @@ conf = {
     "max_turn_len": 30,
 
     "max_to_keep": 1,
-    "num_scan_data": 5,
+    "num_scan_data": 1,
     "_EOS_": 1, #1 for douban data; 28270 for ubuntu
     "final_n_class": 1,
 
     "matching_pretrain_epoch": 1,
     "calibration_pretrain_epoch": 1,
-    "matching_pretrain_model_save_name": 'm',
-    "calibration_pretrain_model_save_name": 'c',
+
+    "calibration_type": 1 #0: labels 1: logits
 }
 
 joint_model = joint_net.Net(conf)

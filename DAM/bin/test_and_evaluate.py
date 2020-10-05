@@ -51,6 +51,7 @@ def test(conf, _model):
                 _model.is_pretrain_calibration: False,
                 _model.is_pretrain_matching: False,
                 _model.is_joint_learning: True,
+                _model.calibration_type: conf['calibration_type'],
                 _model._turns: test_batches["turns"][batch_index],
                 _model._tt_turns_len: test_batches["tt_turns_len"][batch_index],
                 _model._every_turn_len: test_batches["every_turn_len"][batch_index],
