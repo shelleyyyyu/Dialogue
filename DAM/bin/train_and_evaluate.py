@@ -178,7 +178,8 @@ def train(conf, _model):
     # load dev_batches
     #print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + " - start building dev/validation batches")
     dev_batches = reader.build_batches(dev_data, conf)
-    validation_batches = reader.build_batches(validation_data, conf)
+    shuffle_validation_data = reader.unison_shuffle(validation_data)
+    validation_batches = reader.build_batches(shuffle_validation_data, conf)
     #print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + " - finish building dev/validation batches")
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - Finish Data Pre-processing')
 
