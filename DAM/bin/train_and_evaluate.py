@@ -295,7 +295,7 @@ def train(conf, _model):
                     m_g_step, m_lr = _sess.run([_model.m_global_step, _model.m_learning_rate])
                     print("processed: [%.4f]" % (float(step * 1.0 / batch_num)))
                     print("[Matching Model Optimisation] - step: %d , lr: %f , c_loss: [%.4f] m_loss: [%.4f]" %(m_g_step, m_lr, (m_average_c_loss / conf["print_step"]), (m_average_m_loss / conf["print_step"])))
-                    print("[Calibration Model Optimisation] - step: %d , lr: %f , c_loss: [%.4f] m_loss: [%.4f]" %(c_g_step, c_lr, (c_average_c_loss / validation_batch_num), (c_average_m_loss / validation_batch_num)))
+                    print("[Calibration Model Optimisation] - step: %d , lr: %f , c_loss: [%.4f] m_loss: [%.4f]" %(c_g_step, c_lr, (c_average_c_loss / (conf["print_step"]*validation_batch_num)), (c_average_m_loss / (conf["print_step"]*validation_batch_num))))
                     c_average_m_loss, c_average_c_loss, m_average_m_loss, m_average_c_loss, average_correction_rate = 0.0, 0.0, 0.0, 0.0, 0.0
                     #if m_summaries:
                     #    train_summary_writer.add_summary(m_summaries, step)

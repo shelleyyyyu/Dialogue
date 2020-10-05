@@ -173,39 +173,6 @@ class Net(object):
                 # for douban
                 c_final_info = layers.CNN_3d(c_sim, 16, 16)
 
-            # -------------------- Matching Model Model ------------------- #
-            #self.init = tf.global_variables_initializer()
-            '''self.word_embedding = tf.get_variable(
-                name='word_embedding',
-                shape=[self._conf['vocab_size'] + 1, self._conf['emb_size']],
-                dtype=tf.float32,
-                initializer=word_embedding_initializer)'''
-
-            # define placehloders
-            '''self._turns = tf.placeholder(
-                tf.int32,
-                shape=[self._conf["batch_size"], self._conf["max_turn_num"], self._conf["max_turn_len"]])'''
-
-            '''self._tt_turns_len = tf.placeholder(
-                tf.int32,
-                shape=[self._conf["batch_size"]])
-
-            self._every_turn_len = tf.placeholder(
-                tf.int32,
-                shape=[self._conf["batch_size"], self._conf["max_turn_num"]])
-
-            self._response = tf.placeholder(
-                tf.int32,
-                shape=[self._conf["batch_size"], self._conf["max_turn_len"]])
-
-            self._response_len = tf.placeholder(
-                tf.int32,
-                shape=[self._conf["batch_size"]])
-
-            self._label = tf.placeholder(
-                tf.float32,
-                shape=[self._conf["batch_size"]])'''
-
             # define operations
             # response part
             m_Hr = tf.nn.embedding_lookup(self.word_embedding, self._response)
