@@ -346,14 +346,12 @@ class Net(object):
             with tf.variable_scope('m_loss'):
                 #TODO - SHEllY
                 if self.calibration_type == tf.constant(0):
-                    self.c_label = tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.float32)
-                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label, lambda: self.c_label)
-                    self.m_loss, self.m_logits, self.m_y_pred = layers.loss(m_final_info, target_label)
+                    c_label = tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.float32)
+                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label, lambda: c_label)
                 else:
-                    self.c_label = tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.float32)
-                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label,lambda: self.c_y_pred)
-                    self.m_loss, self.m_logits, self.m_y_pred = layers.loss_logits(m_final_info, target_label)
+                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label,lambda: self.c_y_pred[:, -1])
 
+                self.m_loss, self.m_logits, self.m_y_pred = layers.loss(m_final_info, target_label)
                 self.m_gumbel_softmax = gumbel_softmax(self.m_logits, hard=False)
                 self.m_gumbel_softmax_label = gumbel_softmax(self.m_logits, hard=True)
                 self.m_global_step = tf.Variable(0, trainable=False)

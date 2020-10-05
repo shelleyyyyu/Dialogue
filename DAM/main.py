@@ -31,7 +31,7 @@ conf = {
     "is_layer_norm": True,
     "is_positional": False,  
 
-    "stack_num": 5,  
+    "stack_num": 1,
     "attention_type": "dot",
 
     "learning_rate": 1e-3,
@@ -51,6 +51,9 @@ conf = {
     "calibration_pretrain_epoch": 1,
 
     "calibration_type": 1 #0: labels 1: logits
+
+    "calibration_max_step": 2000,
+    "matching_max_step": 2000,
 }
 
 joint_model = joint_net.Net(conf)

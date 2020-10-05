@@ -30,7 +30,7 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
         for batch_index in range(batch_num):
             _feed = {
                 _model.is_pretrain_calibration: True,
-                _model.is_pretrain_matching: False,
+                _model.is_pretrain_matching: True,
                 _model.is_joint_learning: False,
                 _model.calibration_type: conf['calibration_type'],
                 _model._turns: train_batches["turns"][batch_index],
@@ -82,6 +82,8 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
                         step / conf["save_step"]))
                     _pretrain_update_model_save_name = "pretrain_calibration_model.ckpt." + str(int(step / conf["save_step"]))
                     print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + " - success saving model - " + _pretrain_update_model_save_name + " - in " + save_path)
+                if step >= conf["calibration_max_step"]:
+                    break
     return _model, _pretrain_update_model_save_name
 
 def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
@@ -156,6 +158,8 @@ def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
                         step / conf["save_step"]))
                     _pretrain_update_model_save_name = "pretrain_matching_model.ckpt." + str(int(step / conf["save_step"]))
                     print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + " - success saving model - " + _pretrain_update_model_save_name + " - in " + save_path)
+                if step >= conf["matching_max_step"]:
+                    break
     return _model, _pretrain_update_model_save_name
 
 def train(conf, _model):
