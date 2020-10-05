@@ -19,9 +19,7 @@ import bin.test_and_evaluate as test
 
 conf = {
     "data_path": "./data/jdqa/data.pkl",
-    "c_save_path": "./output/jdqa/calibration/",
-    "m_save_path": "./output/jdqa/matching/",
-    "j_save_path": "./output/jdqa/joint/",
+    "save_path": "./output/jdqa/",
     "word_emb_init": './data/jdqa/word_embedding.pkl',
     "init_model": None,  # should be set for test
 

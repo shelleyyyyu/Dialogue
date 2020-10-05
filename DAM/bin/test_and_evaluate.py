@@ -39,7 +39,7 @@ def test(conf, _model):
         step = 0
         average_correction_rate = 0.0
 
-        score_file_path = conf['j_save_path'] + 'score.test'
+        score_file_path = conf['save_path'] + 'score.test'
         score_file = open(score_file_path, 'w')
 
         print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + ' - starting test')
@@ -79,7 +79,7 @@ def test(conf, _model):
         
         #write evaluation result
         result = eva.evaluate(score_file_path)
-        result_file_path = conf["j_save_path"] + "result.test"
+        result_file_path = conf["save_path"] + "result.test"
         with open(result_file_path, 'w') as out_file:
             for p_at in result:
                 out_file.write(str(p_at) + '\n')
