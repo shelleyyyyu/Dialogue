@@ -313,7 +313,7 @@ def train(conf, _model):
                         _feed = {
                             _model.is_pretrain_calibration: False,
                             _model.is_pretrain_matching: False,
-                            _model.is_joint_learning: True,
+                            _model.is_joint_learning: False,
                             _model.calibration_type: conf['calibration_type'],
                             _model._turns: dev_batches["turns"][batch_index],
                             _model._tt_turns_len: dev_batches["tt_turns_len"][batch_index],
@@ -323,10 +323,10 @@ def train(conf, _model):
                             _model._label: dev_batches["label"][batch_index]
                         }
 
-                        c_logits, c_y_pred, m_logits, m_y_pred, c_gumbel_softmax = _sess.run(
-                            [_model.c_logits, _model.c_y_pred, _model.m_logits, _model.m_y_pred, _model.c_gumbel_softmax], feed_dict=_feed)
+                        c_logits, c_y_pred, m_logits, m_y_pred = _sess.run(
+                            [_model.c_logits, _model.c_y_pred, _model.m_logits, _model.m_y_pred], feed_dict=_feed)
 
-                        calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_gumbel_softmax]
+                        calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_y_pred]
                         calibrated_rate = 1 - accuracy_score(calibrated_label, dev_batches["label"][batch_index])
 
                         average_correction_rate += calibrated_rate

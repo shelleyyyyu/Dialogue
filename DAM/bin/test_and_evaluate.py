@@ -50,7 +50,7 @@ def test(conf, _model):
             _feed = {
                 _model.is_pretrain_calibration: False,
                 _model.is_pretrain_matching: False,
-                _model.is_joint_learning: True,
+                _model.is_joint_learning: False,
                 _model.calibration_type: conf['calibration_type'],
                 _model._turns: test_batches["turns"][batch_index],
                 _model._tt_turns_len: test_batches["tt_turns_len"][batch_index],
@@ -71,6 +71,7 @@ def test(conf, _model):
 
             for i in xrange(conf["batch_size"]):
                 score_file.write(
+                    str(c_y_pred[i][-1]) + '\t' +
                     str(m_y_pred[i][-1]) + '\t' +
                     str(test_batches["label"][batch_index][i]) + '\n')
         
