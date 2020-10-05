@@ -50,7 +50,7 @@ conf = {
     "matching_pretrain_epoch": 1,
     "calibration_pretrain_epoch": 1,
 
-    "calibration_type": 1 #0: labels 1: logits
+    "calibration_type": 1, #0: labels 1: logits
 
     "calibration_max_step": 2000,
     "matching_max_step": 2000,
