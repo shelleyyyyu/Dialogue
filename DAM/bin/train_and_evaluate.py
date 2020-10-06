@@ -293,7 +293,7 @@ def train(conf, _model):
                 #batch_index = (batch_index + 1) % batch_num
 
                 # -------------------- Calibration Model Optimisation ------------------- #
-                if batch_index % conf['validation_step'] == 0:
+                if step % conf['validation_step'] == 0:
                     for validation_batch_index in xrange(validation_batch_num):
                         _feed = {
                             _model.is_pretrain_calibration: False,
@@ -329,7 +329,8 @@ def train(conf, _model):
                     m_g_step, m_lr = _sess.run([_model.m_global_step, _model.m_learning_rate])
                     print("processed: [%.4f]" % (float(step * 1.0 / batch_num)))
                     print("[Matching Model Optimisation] - step: %d , lr: %f , c_loss: [%f] m_loss: [%f]" %(m_g_step, m_lr, (m_average_c_loss / conf["print_step"]), (m_average_m_loss / conf["print_step"])))
-                    print("[Calibration Model Optimisation] - step: %d , lr: %f , c_loss: [%f] m_loss: [%f]" %(c_g_step, c_lr, (c_average_c_loss / (conf["print_step"]*validation_batch_num)), (c_average_m_loss / (conf["print_step"]*validation_batch_num))))
+                    if c_average_c_loss is not 0.0:
+                        print("[Calibration Model Optimisation] - step: %d , lr: %f , c_loss: [%f] m_loss: [%f]" %(c_g_step, c_lr, (c_average_c_loss / (conf["print_step"]*validation_batch_num)), (c_average_m_loss / (conf["print_step"]*validation_batch_num))))
                     c_average_m_loss, c_average_c_loss, m_average_m_loss, m_average_c_loss, average_correction_rate = 0.0, 0.0, 0.0, 0.0, 0.0
                     #if m_summaries:
                     #    train_summary_writer.add_summary(m_summaries, step)
