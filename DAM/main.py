@@ -55,6 +55,7 @@ conf = {
 
     "calibration_max_step": 2000,
     "matching_max_step": 2000,
+    "validation_step": 10,
 }
 
 joint_model = joint_net.Net(conf)

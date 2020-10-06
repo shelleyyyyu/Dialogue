@@ -84,7 +84,7 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
                     print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + " - success saving model - " + _pretrain_update_model_save_name + " - in " + save_path)
                 if step >= conf["calibration_max_step"]:
                     break
-    return _model, _pretrain_update_model_save_name
+    return _pretrain_update_model_save_name
 
 def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
     _pretrain_update_model_save_name = None
@@ -160,7 +160,7 @@ def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
                     print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + " - success saving model - " + _pretrain_update_model_save_name + " - in " + save_path)
                 if step >= conf["matching_max_step"]:
                     break
-    return _model, _pretrain_update_model_save_name
+    return _pretrain_update_model_save_name
 
 def train(conf, _model):
     
@@ -189,23 +189,54 @@ def train(conf, _model):
     _graph = _model.build_graph()
     #print(str(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))) + ' - build model graph success')
     #tensorboard_data = './log/DAM_JDQA'
-    with tf.Session(graph=_graph) as _sess:
-        #train_summary_writer = tf.summary.FileWriter(tensorboard_data, _sess._graph)
-        tf.global_variables_initializer().run()
+
+    print('=' * 60 + '\n' + 'Calibration Network Pre-training' + '\n' + '=' * 60)
+    with tf.Session(graph=_graph) as pre_c_sess:
+        _model.init.run()
 
         if conf["init_model"] is not None:
-            _model.saver.restore(_sess, conf["init_model"])
-            print("success init model %s" % conf["init_model"])
+            _model.saver.restore(pre_c_sess, os.path.join(conf["save_path"], conf["init_model"]))
+            print("success init model %s" % str(os.path.join(conf["save_path"], conf["init_model"])))
 
-        print('=' * 60 + '\n' + 'Calibration Network Pre-training' + '\n' + '=' * 60)
-        _model, _pretrain_model_name = _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches)
+        _pretrain_model_name = _pretrain_calibration(pre_c_sess, _graph, _model, conf, train_data, dev_batches)
         if _pretrain_model_name != '' or None: conf["init_model"] = str(_pretrain_model_name)
-        print('Pretrained Model Save Name (Calibration): %s' %(str(_pretrain_model_name)))
+        print('Pretrained Model Save Name (Calibration): %s' % (str(conf["init_model"])))
 
-        print('=' * 60 + '\n' + 'Matching Network Pre-training' + '\n' + '=' * 60)
-        _model, _pretrain_model_name = _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches)
+    tf.reset_default_graph()
+
+    print('=' * 60 + '\n' + 'Matching Network Pre-training' + '\n' + '=' * 60)
+    with tf.Session(graph=_graph) as pre_m_sess:
+        _model.init.run()
+        if conf["init_model"] is not None:
+            _model.saver.restore(pre_m_sess, os.path.join(conf["save_path"], conf["init_model"]))
+            print("success init model %s" % str(os.path.join(conf["save_path"], conf["init_model"])))
+
+        _pretrain_model_name = _pretrain_matching(pre_m_sess, _graph, _model, conf, train_data, dev_batches)
         if _pretrain_model_name != '' or None: conf["init_model"] = str(_pretrain_model_name)
-        print('Pretrained Model Save Name (Matching): %s' %(str(_pretrain_model_name)))
+        print('Pretrained Model Save Name (Matching): %s' % (str(conf["init_model"])))
+
+        # TODO - SHELLY - Test Graph Code
+        #t2 = pre_m_sess.graph.get_tensor_by_name('word_embedding:0')
+        #print(pre_m_sess.run(t2))
+
+    tf.reset_default_graph()
+
+    # TODO - SHELLY - Test Graph Code
+    #with tf.Session(graph=_graph) as pre_m_sess:
+    #    if conf["init_model"] is not None:
+    #        _model.saver.restore(pre_m_sess, os.path.join(conf["save_path"], conf["init_model"]))
+    #        print("success init model %s" % str(os.path.join(conf["save_path"], conf["init_model"])))
+    #    t2 = pre_m_sess.graph.get_tensor_by_name('word_embedding:0')
+    #    print(pre_m_sess.run(t2))
+
+    print('=' * 60 + '\n' + 'Joint Training' + '\n' + '=' * 60)
+    with tf.Session(graph=_graph) as _sess:
+        #train_summary_writer = tf.summary.FileWriter(tensorboard_data, _sess._graph)
+        _model.init.run()
+
+        if conf["init_model"] is not None:
+            _model.saver.restore(_sess, os.path.join(conf["save_path"], conf["init_model"]))
+            print("success init model %s" % str(os.path.join(conf["save_path"], conf["init_model"])))
 
         # refine conf
         batch_num = int(len(train_data['y']) / conf["batch_size"])
@@ -262,7 +293,7 @@ def train(conf, _model):
                 #batch_index = (batch_index + 1) % batch_num
 
                 # -------------------- Calibration Model Optimisation ------------------- #
-                if batch_index % 100 == 0:
+                if batch_index % conf['validation_step'] == 0:
                     for validation_batch_index in xrange(validation_batch_num):
                         _feed = {
                             _model.is_pretrain_calibration: False,
@@ -298,7 +329,7 @@ def train(conf, _model):
                     m_g_step, m_lr = _sess.run([_model.m_global_step, _model.m_learning_rate])
                     print("processed: [%.4f]" % (float(step * 1.0 / batch_num)))
                     print("[Matching Model Optimisation] - step: %d , lr: %f , c_loss: [%f] m_loss: [%f]" %(m_g_step, m_lr, (m_average_c_loss / conf["print_step"]), (m_average_m_loss / conf["print_step"])))
-                    if batch_index % 100 == 0:
+                    if batch_index % conf['validation_step'] == 0:
                         print("[Calibration Model Optimisation] - step: %d , lr: %f , c_loss: [%f] m_loss: [%f]" %(c_g_step, c_lr, (c_average_c_loss / (conf["print_step"]*validation_batch_num)), (c_average_m_loss / (conf["print_step"]*validation_batch_num))))
                     c_average_m_loss, c_average_c_loss, m_average_m_loss, m_average_c_loss, average_correction_rate = 0.0, 0.0, 0.0, 0.0, 0.0
                     #if m_summaries:

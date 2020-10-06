@@ -27,7 +27,6 @@ class Net(object):
 
     def build_graph(self):
         with self._graph.as_default():
-            #self.init = tf.global_variables_initializer()
 
             # --- Share Parameter: rand_seed ---
             if self._conf['rand_seed'] is not None:
@@ -226,7 +225,6 @@ class Net(object):
                             m_t_a_r = layers.block(
                                 m_Hu_stack[index], m_Hr_stack[index], m_Hr_stack[index],
                                 Q_lengths=m_t_turn_length, K_lengths=self._response_len)
-
                     with tf.variable_scope('m_r_attend_t_' + str(index)):
                         try:
                             m_r_a_t = layers.block(
@@ -337,7 +335,7 @@ class Net(object):
                     self.m_loss,
                     global_step=self.m_global_step)
 
-                #self.init = tf.global_variables_initializer()
+                self.init = tf.global_variables_initializer()
                 self.saver = tf.train.Saver(max_to_keep=self._conf["max_to_keep"])
                 self.m_all_variables = tf.global_variables()
                 self.m_all_operations = self._graph.get_operations()
