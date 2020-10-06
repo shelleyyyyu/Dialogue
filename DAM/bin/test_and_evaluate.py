@@ -7,7 +7,7 @@ import tensorflow as tf
 import numpy as np
 
 import utils.reader as reader
-import utils.evaluation as eva
+import utils.douban_evaluation as eva
 from sklearn.metrics import accuracy_score
 
 def test(conf, _model):
@@ -81,10 +81,12 @@ def test(conf, _model):
         
         #write evaluation result
         result = eva.evaluate(score_file_path)
+        result.update(eva.evaluate_auc_from_file(score_file_path))
         result_file_path = conf["save_path"] + "result.test"
         with open(result_file_path, 'w') as out_file:
-            for p_at in result:
-                out_file.write(str(p_at) + '\n')
+            for key in result.keys():
+                r = '%.4f'%result[key]
+                out_file.write(str(key) + '\t' + r + '\n')
         print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + ' - finish evaluation')
         
 

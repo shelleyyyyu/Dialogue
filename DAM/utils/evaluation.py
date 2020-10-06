@@ -53,9 +53,9 @@ def evaluate_auc_from_file(file_path):
 			if len(tokens) != 2:
 				continue
 
-			prob_1_list.append(float(tokens[0]))
-			pred_label_list.append(1 if tokens[0] > 0.5 else 0)
-			truth_label_list.append(int(tokens[1]))
+			prob_1_list.append(float(tokens[-2]))
+			pred_label_list.append(1 if tokens[-2] > 0.5 else 0)
+			truth_label_list.append(int(tokens[-1]))
 
 	#auc = roc_auc_score(truth_label_list, prob_1_list)
 	acc = accuracy_score(truth_label_list, pred_label_list)
