@@ -49,7 +49,7 @@ conf = {
     "_EOS_": 1, #1 for douban data 28270 for ubuntu
     "final_n_class": 1,
 
-    "calibration_type": 1  # 0: labels 1: logits
+    "calibration_type": 0  # 0: labels 1: logits
 }
 
 joint_model = joint_net.Net(conf)

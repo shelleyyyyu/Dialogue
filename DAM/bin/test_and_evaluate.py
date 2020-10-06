@@ -21,9 +21,7 @@ def test(conf, _model):
 
     # refine conf
     test_batch_num = len(test_batches["response"])
-
     print('configurations: %s' %conf)
-
     _graph = _model.build_graph()
     print(str(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))) + ' - build model graph success')
 
@@ -35,8 +33,6 @@ def test(conf, _model):
             _model.saver.restore(_sess, conf["init_model"])
             print("success init calibration model %s" %conf["init_model"])
 
-        batch_index = 0
-        step = 0
         average_correction_rate = 0.0
 
         score_file_path = conf['save_path'] + 'score.test'
@@ -46,11 +42,11 @@ def test(conf, _model):
 
         for batch_index in xrange(test_batch_num):
 
-            # -------------------- Data Calibration Model ------------------- #
             _feed = {
                 _model.is_pretrain_calibration: False,
                 _model.is_pretrain_matching: False,
-                _model.is_joint_learning: False,
+                _model.is_backprop_calibration: False,
+                _model.is_backprop_matching: False,
                 _model.calibration_type: conf['calibration_type'],
                 _model._turns: test_batches["turns"][batch_index],
                 _model._tt_turns_len: test_batches["tt_turns_len"][batch_index],
@@ -60,13 +56,10 @@ def test(conf, _model):
                 _model._label: test_batches["label"][batch_index],
                 }
 
-            c_logits, c_y_pred, m_logits, m_y_pred, c_gumbel_softmax = _sess.run(
-                [_model.c_logits, _model.c_y_pred, _model.m_logits, _model.m_y_pred, _model.c_gumbel_softmax],
-                feed_dict=_feed)
+            _, c_y_pred, _, m_y_pred = _sess.run([_model.c_logits, _model.c_y_pred, _model.m_logits, _model.m_y_pred], feed_dict=_feed)
 
-            calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_gumbel_softmax]
+            calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_y_pred]
             calibrated_rate = 1 - accuracy_score(calibrated_label, test_batches["label"][batch_index])
-
             average_correction_rate += calibrated_rate
 
             for i in xrange(conf["batch_size"]):
