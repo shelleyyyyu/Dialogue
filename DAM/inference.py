@@ -18,9 +18,9 @@ import bin.test_and_evaluate as test
 # configure
 
 conf = {
-    "data_path": "./data/jdqa/data.pkl",
-    "save_path": "./output/jdqa/",
-    "word_emb_init": './data/jdqa/word_embedding.pkl',
+    "data_path": "./data/douban/data.pkl",
+    "word_emb_init": './data/douban/word_embedding.pkl',
+    "save_path": "./output/douban/",
     "init_model": None,  # should be set for test
 
     "rand_seed": None,
@@ -37,8 +37,8 @@ conf = {
     "attention_type": "dot",
 
     "learning_rate": 1e-3,
-    "batch_size": 200, #256 fot train 200 for test
-    "vocab_size": 256357,
+    "vocab_size": 172130,
+    "batch_size": 100, #256 fot train 200 for test
     "emb_size": 80,
 
     "max_turn_num": 1,
@@ -49,7 +49,7 @@ conf = {
     "_EOS_": 1, #1 for douban data 28270 for ubuntu
     "final_n_class": 1,
 
-    "calibration_type": 1  # 0: labels 1: logits
+    "calibration_type": 0  # 0: labels 1: logits
 }
 
 joint_model = joint_net.Net(conf)

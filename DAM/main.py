@@ -17,12 +17,12 @@ import bin.test_and_evaluate as test
 
 
 conf = {
-    "data_path": "./data/jdqa/data.pkl",
-    "word_emb_init": './data/jdqa/word_embedding.pkl',
-    "save_path": "./output/jdqa/",
+    "data_path": "./data/douban/data.pkl",
+    "word_emb_init": './data/douban/word_embedding.pkl',
+    "save_path": "./output/douban/",
     "init_model": None, #should be set for test
 
-    "rand_seed": None, 
+    "rand_seed": None,
 
     "drop_dense": None,
     "drop_attention": None,
@@ -36,9 +36,9 @@ conf = {
     "attention_type": "dot",
 
     "learning_rate": 1e-3,
+    "vocab_size": 172130,
     "batch_size": 256, #256 fot train 200 for test
-    "vocab_size": 256357,
-    "emb_size": 80,
+    "emb_size": 200,
 
     "max_turn_num": 1,
     "max_turn_len": 30,
@@ -51,10 +51,11 @@ conf = {
     "matching_pretrain_epoch": 1,
     "calibration_pretrain_epoch": 1,
 
-    "calibration_type": 1, #0: labels 1: logits
+    "calibration_type": 0, #0: labels 1: logits_softmax 2: logits
 
-    "calibration_max_step": 2000,
-    "matching_max_step": 2000,
+    "calibration_max_step": 100000000,
+    "matching_max_step": 100000000,
+
     "validation_step": 10,
 }
 
