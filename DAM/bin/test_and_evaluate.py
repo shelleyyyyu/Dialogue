@@ -7,7 +7,7 @@ import tensorflow as tf
 import numpy as np
 
 import utils.reader as reader
-import utils.douban_evaluation as eva
+import utils.evaluation as eva
 from sklearn.metrics import accuracy_score
 
 def test(conf, _model):

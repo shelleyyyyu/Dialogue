@@ -33,6 +33,7 @@ conf = {
     "is_positional": False,
 
     "stack_num": 5,
+    "c_stack_num": 5,
     "attention_type": "dot",
 
     "learning_rate": 1e-3,
@@ -43,8 +44,8 @@ conf = {
     "max_turn_num": 1,
     "max_turn_len": 30,
 
-    "max_to_keep": 3,
-    "num_scan_data": 5,
+    "max_to_keep": 1,
+    "num_scan_data": 1,
     "_EOS_": 1, #1 for douban data 28270 for ubuntu
     "final_n_class": 1,
 

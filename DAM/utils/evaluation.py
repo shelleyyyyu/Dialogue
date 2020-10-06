@@ -70,6 +70,6 @@ def evaluate_auc(probs, truth_labels):
 		pred_label_list.append(1 if float(probs[i]) > 0.5 else 0)
 		truth_label_list.append(int(truth_labels[i]))
 
-	#auc = roc_auc_score(truth_label_list, prob_1_list)
-	acc = accuracy_score(truth_label_list, pred_label_list)
-	return acc
+	auc = roc_auc_score(truth_label_list, prob_1_list)
+	#acc = accuracy_score(truth_label_list, pred_label_list)
+	return auc
