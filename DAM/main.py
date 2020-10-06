@@ -44,7 +44,7 @@ conf = {
     "max_turn_len": 30,
 
     "max_to_keep": 1,
-    "num_scan_data": 1,
+    "num_scan_data": 5,
     "_EOS_": 1, #1 for douban data; 28270 for ubuntu
     "final_n_class": 1,
 
@@ -53,8 +53,8 @@ conf = {
 
     "calibration_type": 1, #0: labels 1: logits
 
-    "calibration_max_step": 2000,
-    "matching_max_step": 2000,
+    "calibration_max_step": 10000000000,
+    "matching_max_step": 10000000000,
     "validation_step": 10,
 }
 
