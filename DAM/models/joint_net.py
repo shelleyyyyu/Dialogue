@@ -4,7 +4,7 @@ import cPickle as pickle
 from utils.gumbel_softmax import gumbel_softmax
 import utils.layers as layers
 import utils.operations as op
-
+import sys
 
 class Net(object):
     '''Add positional encoding(initializer lambda is 0),
@@ -41,13 +41,6 @@ class Net(object):
             else:
                 word_embedding_initializer = tf.random_normal_initializer(stddev=0.1)
 
-            self.is_pretrain_calibration = tf.placeholder(tf.bool)
-
-            self.is_pretrain_matching = tf.placeholder(tf.bool)
-
-            self.is_joint_learning= tf.placeholder(tf.bool)
-
-            # -------------------- Data Calibration Model ------------------- #
             self.word_embedding = tf.get_variable(
                 name='word_embedding',
                 shape=[self._conf['vocab_size'] + 1, self._conf['emb_size']],
@@ -82,6 +75,17 @@ class Net(object):
             self.calibration_type = tf.placeholder(
                 tf.int32,
                 shape=[])
+
+            self.is_pretrain_calibration = tf.placeholder(tf.bool)
+
+            self.is_pretrain_matching = tf.placeholder(tf.bool)
+
+            self.is_backprop_calibration= tf.placeholder(tf.bool)
+
+            self.is_backprop_matching= tf.placeholder(tf.bool)
+
+
+            # ========== Calibration Network ==========
 
             # define operations
             # response part
@@ -172,6 +176,8 @@ class Net(object):
                 # for douban
                 c_final_info = layers.CNN_3d(c_sim, 16, 16)
 
+            # ========== Matching Network ==========
+
             # define operations
             # response part
             m_Hr = tf.nn.embedding_lookup(self.word_embedding, self._response)
@@ -259,13 +265,101 @@ class Net(object):
             with tf.variable_scope('m_cnn_aggregation'):
                 # for douban
                 m_final_info = layers.CNN_3d(m_sim, 16, 16)
-                # loss and train
+
+            #with tf.variable_scope('trainable_variables'):
+            #    self.t_vars = tf.trainable_variables()
+            #    print(self.t_vars)
+            #    sys.exit(0)
+            #    self.c_vars = [var for var in self.t_vars if 'c_' in var.name]
+            #    self.m_vars = [var for var in self.t_vars if 'm_' in var.name]
 
             # loss and train
-            with tf.variable_scope('c_loss'):
+            with tf.variable_scope('loss'):
+                # pass to linear transformation and softmax to get the logits and softmax-ed value y_pred
+                self.c_loss, self.c_logits, self.c_y_pred = layers.calibration_loss(c_final_info, self._label)
+
+                # Use the c_y_pred abd define the calibrated label for the matching model (classifier)
+                c_label = tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.float32)
+                if self.calibration_type == tf.constant(0):
+                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label,
+                                           lambda: c_label)
+                elif self.calibration_type == tf.constant(1):
+                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label,
+                                           lambda: self.c_y_pred[:, -1])
+                elif self.calibration_type == tf.constant(2):
+                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label,
+                                           lambda: self.c_logits[:, -1])
+                else:
+                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label,
+                                           lambda: c_label)
+
+                # Pass to the loss function to -
+                # 1. pass to linear transformation and softmax to get the logits and softmax-ed value m_y_pred
+                # 2. the logits are then pass to calculate cross-entropy loss together with the defined target_label
+                # self.total_loss: gradient can backward to calibration network
+                self.m_loss, self.m_logits, self.m_y_pred = layers.loss(m_final_info, target_label)
+
+                self.total_loss = self.c_loss + self.m_loss
+                # Start update the network variable
+
+                self.global_step = tf.Variable(0, trainable=False)
+                initial_learning_rate = self._conf['learning_rate']
+                self.learning_rate = tf.train.exponential_decay(
+                    initial_learning_rate,
+                    global_step=self.global_step,
+                    decay_steps=400,
+                    decay_rate=0.9,
+                    staircase=True)
+
+                # all gradients and variables
+                Optimizer = tf.train.AdamOptimizer(self.learning_rate)
+                self.grads_and_vars = Optimizer.compute_gradients(self.total_loss)
+                self.t_vars = tf.trainable_variables()
+                self.c_vars = [(grad, var) for grad, var in self.grads_and_vars if 'word_' in var.name and grad is not None] + \
+                              [(grad, var) for grad, var in self.grads_and_vars if 'c_' in var.name and grad is not None]
+                self.m_vars = [(grad, var) for grad, var in self.grads_and_vars if 'word_' in var.name and grad is not None] + \
+                              [(grad, var) for grad, var in self.grads_and_vars if 'm_' in var.name and grad is not None]
+
+                if self.is_pretrain_calibration == tf.constant(True):
+                    grads_and_vars = self.c_vars
+                    opt = Optimizer.minimize(
+                        self.c_loss,
+                        global_step=self.global_step)
+                elif self.is_pretrain_matching == tf.constant(True):
+                    grads_and_vars = self.m_vars
+                    opt = Optimizer.minimize(
+                        self.m_loss,
+                        global_step=self.global_step)
+                elif self.is_backprop_calibration == tf.constant(True):
+                    grads_and_vars = self.c_vars
+                    opt = Optimizer.minimize(
+                        self.total_loss,
+                        global_step=self.global_step)
+                elif self.is_backprop_matching == tf.constant(True):
+                    grads_and_vars = self.m_vars
+                    opt = Optimizer.minimize(
+                        self.total_loss,
+                        global_step=self.global_step)
+                else:
+                    grads_and_vars = self.grads_and_vars
+                    opt = Optimizer.minimize(
+                        self.total_loss,
+                        global_step=self.global_step)
+
+                self.target_grads_and_vars = grads_and_vars
+                self.optimizer = opt
+
+                self.init = tf.global_variables_initializer()
+                self.saver = tf.train.Saver(max_to_keep=self._conf["max_to_keep"])
+                self.capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in self.target_grads_and_vars]
+                self.g_updates = Optimizer.apply_gradients(
+                    self.capped_gvs,
+                    global_step=self.global_step)
+
+            '''with tf.variable_scope('c_loss'):
                 self.c_loss, self.c_logits, self.c_y_pred = layers.loss(c_final_info, self._label)
-                self.c_gumbel_softmax = gumbel_softmax(self.c_logits, hard=False)
-                self.c_gumbel_softmax_label = gumbel_softmax(self.c_logits, hard=True)
+                #self.c_gumbel_softmax = gumbel_softmax(self.c_logits, hard=False)
+                #self.c_gumbel_softmax_label = gumbel_softmax(self.c_logits, hard=True)
                 self.c_global_step = tf.Variable(0, trainable=False)
                 c_initial_learning_rate = self._conf['learning_rate']
                 self.c_learning_rate = tf.train.exponential_decay(
@@ -303,24 +397,21 @@ class Net(object):
                     self.c_capped_gvs,
                     global_step=self.c_global_step)
 
-            with tf.variable_scope('variables'):
-                self.t_vars = tf.trainable_variables()
-                self.c_vars = [var for var in self.t_vars if 'c_' in var.name]
-                self.m_vars = [var for var in self.t_vars if 'm_' in var.name]
-
             with tf.variable_scope('m_loss'):
-                #TODO - SHEllY
+                # Define the target label form
+                c_label = tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.float32)
                 if self.calibration_type == tf.constant(0):
-                    c_label = tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.float32)
                     target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label, lambda: c_label)
+                elif self.calibration_type == tf.constant(1):
+                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label, lambda: self.c_y_pred[:, -1])
                 elif self.calibration_type == tf.constant(2):
-                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label,lambda: self.c_logits[:, -1])
+                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label, lambda: self.c_logits[:, -1])
                 else:
-                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label,lambda: self.c_y_pred[:, -1])
+                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label, lambda: c_label)
 
                 self.m_loss, self.m_logits, self.m_y_pred = layers.loss(m_final_info, target_label)
-                self.m_gumbel_softmax = gumbel_softmax(self.m_logits, hard=False)
-                self.m_gumbel_softmax_label = gumbel_softmax(self.m_logits, hard=True)
+                #self.m_gumbel_softmax = gumbel_softmax(self.m_logits, hard=False)
+                #self.m_gumbel_softmax_label = gumbel_softmax(self.m_logits, hard=True)
                 self.m_global_step = tf.Variable(0, trainable=False)
                 m_initial_learning_rate = self._conf['learning_rate']
                 self.m_learning_rate = tf.train.exponential_decay(
@@ -355,7 +446,7 @@ class Net(object):
                 self.m_capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in self.m_target_grads_and_vars]
                 self.m_g_updates = m_Optimizer.apply_gradients(
                     self.m_capped_gvs,
-                    global_step=self.m_global_step)
+                    global_step=self.m_global_step)'''
 
         return self._graph
 
