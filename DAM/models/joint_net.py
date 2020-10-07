@@ -296,14 +296,11 @@ class Net(object):
                 def f_calibration_type_2():
                     return self.c_logits[:, -1], tf.constant(2)
 
-                target_label, shelly = tf.case({tf.equal(self.is_pretrain_matching, tf.constant(True)): f_pretrain_matching,
+                target_label, self.shelly_test = tf.case({tf.equal(self.is_pretrain_matching, tf.constant(True)): f_pretrain_matching,
                                         tf.equal(self.calibration_type, tf.constant(0)): f_calibration_type_0,
                                         tf.equal(self.calibration_type, tf.constant(1)): f_calibration_type_1,
                                         tf.equal(self.calibration_type, tf.constant(2)): f_calibration_type_2},
                             default=f_pretrain_matching, exclusive=False)
-
-                # TODO - remove - For test
-                self.shelly_test = shelly
 
                 # Pass to the loss function to -
                 # 1. pass to linear transformation and softmax to get the logits and softmax-ed value m_y_pred
@@ -311,8 +308,7 @@ class Net(object):
                 # self.total_loss: gradient can backward to calibration network
                 self.m_loss, self.m_logits, self.m_y_pred = layers.loss(m_final_info, target_label)
 
-                self.total_loss = self.c_loss + self.m_loss
-
+                #self.total_loss = self.m_loss+self.c_loss
                 # Start update the network variable
                 self.global_step = tf.Variable(0, trainable=False)
                 initial_learning_rate = self._conf['learning_rate']
@@ -322,51 +318,66 @@ class Net(object):
                     decay_steps=self._conf['decay_steps'],
                     decay_rate=self._conf['decay_rate'],
                     staircase=True)
+                Optimizer = tf.train.AdamOptimizer(self.learning_rate)
+                def c_loss_fn():
+                    self.optimizer = Optimizer.minimize(self.c_loss, global_step=self.global_step)
+                    return self.c_loss, tf.constant(111)
+                def m_loss_fn():
+                    self.optimizer = Optimizer.minimize(self.m_loss, global_step=self.global_step)
+                    return self.m_loss, tf.constant(222)
+                def c_m_loss_fn():
+                    self.optimizer = Optimizer.minimize(self.m_loss+self.c_loss, global_step=self.global_step)
+                    return self.m_loss + self.c_loss, tf.constant(333)
+
+                self.total_loss, self.ivy_test = tf.case(
+                    {tf.equal(self.is_pretrain_calibration, tf.constant(True)): c_loss_fn,
+                     tf.equal(self.is_pretrain_matching, tf.constant(True)): m_loss_fn,
+                     tf.equal(self.is_backprop_calibration, tf.constant(True)): c_m_loss_fn,
+                     tf.equal(self.is_backprop_matching, tf.constant(True)): c_m_loss_fn},
+                    default=c_m_loss_fn, exclusive=False)
 
                 # all gradients and variables
-                Optimizer = tf.train.AdamOptimizer(self.learning_rate)
-                self.grads_and_vars = Optimizer.compute_gradients(self.total_loss)
-                self.t_vars = tf.trainable_variables()
-                self.c_vars = [(grad, var) for grad, var in self.grads_and_vars if 'word_' in var.name and grad is not None] + \
-                              [(grad, var) for grad, var in self.grads_and_vars if 'c_' in var.name and grad is not None]
-                self.m_vars = [(grad, var) for grad, var in self.grads_and_vars if 'word_' in var.name and grad is not None] + \
-                              [(grad, var) for grad, var in self.grads_and_vars if 'm_' in var.name and grad is not None]
-
-                if self.is_pretrain_calibration == tf.constant(True):
-                    grads_and_vars = self.c_vars
-                    opt = Optimizer.minimize(
-                        self.c_loss,
-                        global_step=self.global_step)
-                elif self.is_pretrain_matching == tf.constant(True):
-                    grads_and_vars = self.m_vars
-                    opt = Optimizer.minimize(
-                        self.m_loss,
-                        global_step=self.global_step)
-                elif self.is_backprop_calibration == tf.constant(True):
-                    grads_and_vars = self.c_vars
-                    opt = Optimizer.minimize(
-                        self.total_loss,
-                        global_step=self.global_step)
-                elif self.is_backprop_matching == tf.constant(True):
-                    grads_and_vars = self.m_vars
-                    opt = Optimizer.minimize(
-                        self.total_loss,
-                        global_step=self.global_step)
-                else:
-                    grads_and_vars = self.grads_and_vars
-                    opt = Optimizer.minimize(
-                        self.total_loss,
-                        global_step=self.global_step)
-
-                self.target_grads_and_vars = grads_and_vars
-                self.optimizer = opt
-
                 self.init = tf.global_variables_initializer()
                 self.saver = tf.train.Saver(max_to_keep=self._conf["max_to_keep"])
-                self.capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in self.target_grads_and_vars]
-                self.g_updates = Optimizer.apply_gradients(
-                    self.capped_gvs,
-                    global_step=self.global_step)
+                self.all_variables = tf.global_variables()
+                self.all_operations = self._graph.get_operations()
 
+                #self.optimizer = Optimizer.minimize(self.total_loss, global_step=self.global_step)
+                self.grads_and_vars = Optimizer.compute_gradients(self.total_loss)
+                self.c_vars = [(grad, var) for grad, var in self.grads_and_vars if
+                               'c_' in var.name and grad is not None]
+                self.m_vars = [(grad, var) for grad, var in self.grads_and_vars if
+                               'm_' in var.name and grad is not None]
+                def c_var_fn():
+                    target_grads_and_vars = []
+                    for grad, var in self.grads_and_vars:
+                        if grad is not None and 'c_' in var.name:
+                            target_grads_and_vars.append((grad, var))
+                    #print(target_grads_and_vars[-1])
+                    capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in target_grads_and_vars]
+                    #print(capped_gvs[-1])
+                    g_updates = Optimizer.apply_gradients(
+                        capped_gvs,
+                        global_step=self.global_step)
+                    return g_updates, capped_gvs, tf.constant(111)
+                def m_var_fn():
+                    target_grads_and_vars = []
+                    for grad, var in self.grads_and_vars:
+                        if grad is not None and 'm_' in var.name:
+                            target_grads_and_vars.append((grad, var))
+                    #print(target_grads_and_vars[-1])
+                    capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in target_grads_and_vars]
+                    #print(capped_gvs[-1])
+                    g_updates = Optimizer.apply_gradients(
+                        capped_gvs,
+                        global_step=self.global_step)
+                    return g_updates, capped_gvs, tf.constant(222)
+
+                self.g_updates, self.capped_gvs, self.tam_test = tf.case(
+                    {tf.equal(self.is_pretrain_calibration, tf.constant(True)): c_var_fn,
+                     tf.equal(self.is_pretrain_matching, tf.constant(True)): m_var_fn,
+                     tf.equal(self.is_backprop_calibration, tf.constant(True)): c_var_fn,
+                     tf.equal(self.is_backprop_matching, tf.constant(True)): m_var_fn},
+                    default=m_var_fn, exclusive=False)
         return self._graph
 

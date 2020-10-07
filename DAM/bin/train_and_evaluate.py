@@ -29,10 +29,10 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
         train_batches = reader.build_batches(shuffle_train, conf)
         for batch_index in range(batch_num):
             _feed = {
-                _model.is_pretrain_calibration: True,
+                _model.is_pretrain_calibration: False,
                 _model.is_pretrain_matching: False,
                 _model.is_backprop_calibration: False,
-                _model.is_backprop_matching: False,
+                _model.is_backprop_matching: True,
                 _model.calibration_type: conf['calibration_type'],
                 _model._turns: train_batches["turns"][batch_index],
                 _model._tt_turns_len: train_batches["tt_turns_len"][batch_index],
@@ -42,8 +42,14 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
                 _model._label: train_batches["label"][batch_index]
             }
 
-            shelly_test, _, _curr_loss = _sess.run([_model.shelly_test, _model.g_updates, _model.c_loss], feed_dict=_feed)
-            print(shelly_test)
+            _, _curr_loss = _sess.run([_model.g_updates, _model.c_loss], feed_dict=_feed)
+
+            #ivy_test, shelly_test, tam_test, c_loss, m_loss, total_loss, capped_gvs, _, _curr_loss = \
+            #    _sess.run([_model.ivy_test, _model.shelly_test, _model.tam_test, _model.c_loss, _model.m_loss, _model.total_loss, _model.capped_gvs , _model.g_updates, _model.c_loss], feed_dict=_feed)
+            #print((c_loss, m_loss, total_loss))
+            #print(shelly_test, ivy_test, tam_test)
+            #print(len(capped_gvs))
+            #sys.exit()
             average_loss += _curr_loss
             step += 1
 
