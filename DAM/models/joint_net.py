@@ -41,8 +41,14 @@ class Net(object):
             else:
                 word_embedding_initializer = tf.random_normal_initializer(stddev=0.1)
 
-            self.word_embedding = tf.get_variable(
-                name='word_embedding',
+            self.c_word_embedding = tf.get_variable(
+                name='c_word_embedding',
+                shape=[self._conf['vocab_size'] + 1, self._conf['emb_size']],
+                dtype=tf.float32,
+                initializer=word_embedding_initializer)
+
+            self.m_word_embedding = tf.get_variable(
+                name='m_word_embedding',
                 shape=[self._conf['vocab_size'] + 1, self._conf['emb_size']],
                 dtype=tf.float32,
                 initializer=word_embedding_initializer)
@@ -89,7 +95,7 @@ class Net(object):
 
             # define operations
             # response part
-            c_Hr = tf.nn.embedding_lookup(self.word_embedding, self._response)
+            c_Hr = tf.nn.embedding_lookup(self.c_word_embedding, self._response)
 
             if self._conf['is_positional'] and self._conf['c_stack_num'] > 0:
                 with tf.variable_scope('c_positional'):
@@ -111,7 +117,7 @@ class Net(object):
             c_sim_turns = []
             # for every turn_t calculate matching vector
             for c_turn_t, c_t_turn_length in zip(c_list_turn_t, c_list_turn_length):
-                c_Hu = tf.nn.embedding_lookup(self.word_embedding, c_turn_t)  # [batch, max_turn_len, emb_size]
+                c_Hu = tf.nn.embedding_lookup(self.c_word_embedding, c_turn_t)  # [batch, max_turn_len, emb_size]
 
                 if self._conf['is_positional'] and self._conf['c_stack_num'] > 0:
                     with tf.variable_scope('c_positional', reuse=True):
@@ -180,7 +186,7 @@ class Net(object):
 
             # define operations
             # response part
-            m_Hr = tf.nn.embedding_lookup(self.word_embedding, self._response)
+            m_Hr = tf.nn.embedding_lookup(self.m_word_embedding, self._response)
 
             if self._conf['is_positional'] and self._conf['stack_num'] > 0:
                 with tf.variable_scope('m_positional'):
@@ -202,7 +208,7 @@ class Net(object):
             m_sim_turns = []
             # for every turn_t calculate matching vector
             for m_turn_t, m_t_turn_length in zip(m_list_turn_t, m_list_turn_length):
-                m_Hu = tf.nn.embedding_lookup(self.word_embedding, m_turn_t)  # [batch, max_turn_len, emb_size]
+                m_Hu = tf.nn.embedding_lookup(self.m_word_embedding, m_turn_t)  # [batch, max_turn_len, emb_size]
 
                 if self._conf['is_positional'] and self._conf['stack_num'] > 0:
                     with tf.variable_scope('m_positional', reuse=True):
@@ -280,18 +286,24 @@ class Net(object):
 
                 # Use the c_y_pred abd define the calibrated label for the matching model (classifier)
                 c_label = tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.float32)
-                if self.calibration_type == tf.constant(0):
-                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label,
-                                           lambda: c_label)
-                elif self.calibration_type == tf.constant(1):
-                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label,
-                                           lambda: self.c_y_pred[:, -1])
-                elif self.calibration_type == tf.constant(2):
-                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label,
-                                           lambda: self.c_logits[:, -1])
-                else:
-                    target_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), lambda: self._label,
-                                           lambda: c_label)
+
+                def f_pretrain_matching():
+                    return self._label, tf.constant(-1)
+                def f_calibration_type_0():
+                    return c_label, tf.constant(111)
+                def f_calibration_type_1():
+                    return self.c_y_pred[:, -1], tf.constant(1)
+                def f_calibration_type_2():
+                    return self.c_logits[:, -1], tf.constant(2)
+
+                target_label, shelly = tf.case({tf.equal(self.is_pretrain_matching, tf.constant(True)): f_pretrain_matching,
+                                        tf.equal(self.calibration_type, tf.constant(0)): f_calibration_type_0,
+                                        tf.equal(self.calibration_type, tf.constant(1)): f_calibration_type_1,
+                                        tf.equal(self.calibration_type, tf.constant(2)): f_calibration_type_2},
+                            default=f_pretrain_matching, exclusive=False)
+
+                # TODO - remove - For test
+                self.shelly_test = shelly
 
                 # Pass to the loss function to -
                 # 1. pass to linear transformation and softmax to get the logits and softmax-ed value m_y_pred
@@ -300,8 +312,8 @@ class Net(object):
                 self.m_loss, self.m_logits, self.m_y_pred = layers.loss(m_final_info, target_label)
 
                 self.total_loss = self.c_loss + self.m_loss
-                # Start update the network variable
 
+                # Start update the network variable
                 self.global_step = tf.Variable(0, trainable=False)
                 initial_learning_rate = self._conf['learning_rate']
                 self.learning_rate = tf.train.exponential_decay(

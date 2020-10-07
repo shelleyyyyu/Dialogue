@@ -42,7 +42,8 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
                 _model._label: train_batches["label"][batch_index]
             }
 
-            _, _curr_loss = _sess.run([_model.g_updates, _model.c_loss], feed_dict=_feed)
+            shelly_test, _, _curr_loss = _sess.run([_model.shelly_test, _model.g_updates, _model.c_loss], feed_dict=_feed)
+            print(shelly_test)
             average_loss += _curr_loss
             step += 1
 
