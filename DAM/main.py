@@ -56,6 +56,9 @@ conf = {
     "calibration_max_step": 10000000000,
     "matching_max_step": 10000000000,
     "validation_step": 10,
+
+    "decay_steps": 400,
+    "decay_rate": 0.9
 }
 
 joint_model = joint_net.Net(conf)

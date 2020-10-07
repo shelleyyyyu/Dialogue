@@ -307,8 +307,8 @@ class Net(object):
                 self.learning_rate = tf.train.exponential_decay(
                     initial_learning_rate,
                     global_step=self.global_step,
-                    decay_steps=400,
-                    decay_rate=0.9,
+                    decay_steps=conf['decay_steps'],
+                    decay_rate=conf['decay_rate'],
                     staircase=True)
 
                 # all gradients and variables
