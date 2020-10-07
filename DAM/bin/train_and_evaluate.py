@@ -29,10 +29,10 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
         train_batches = reader.build_batches(shuffle_train, conf)
         for batch_index in range(batch_num):
             _feed = {
-                _model.is_pretrain_calibration: False,
+                _model.is_pretrain_calibration: True,
                 _model.is_pretrain_matching: False,
                 _model.is_backprop_calibration: False,
-                _model.is_backprop_matching: True,
+                _model.is_backprop_matching: False,
                 _model.calibration_type: conf['calibration_type'],
                 _model._turns: train_batches["turns"][batch_index],
                 _model._tt_turns_len: train_batches["tt_turns_len"][batch_index],

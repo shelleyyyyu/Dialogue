@@ -283,7 +283,7 @@ class Net(object):
                 def f_pretrain_matching():
                     return self._label, tf.constant(-1)
                 def f_calibration_type_0():
-                    return c_label, tf.constant(111)
+                    return c_label, tf.constant(0)
                 def f_calibration_type_1():
                     return self.c_y_pred[:, -1], tf.constant(1)
                 def f_calibration_type_2():
