@@ -263,7 +263,7 @@ class Net(object):
                     # divide sqrt(200) to prevent gradient explosion
                     m_sim = tf.einsum('biks,bjks->bijs', m_t_a_r, m_r_a_t) / tf.sqrt(200.0)
 
-            m_sim_turns.append(m_sim)
+                m_sim_turns.append(m_sim)
 
             # cnn and aggregation
             m_sim = tf.stack(m_sim_turns, axis=1)
@@ -271,13 +271,6 @@ class Net(object):
             with tf.variable_scope('m_cnn_aggregation'):
                 # for douban
                 m_final_info = layers.CNN_3d(m_sim, 16, 16)
-
-            #with tf.variable_scope('trainable_variables'):
-            #    self.t_vars = tf.trainable_variables()
-            #    print(self.t_vars)
-            #    sys.exit(0)
-            #    self.c_vars = [var for var in self.t_vars if 'c_' in var.name]
-            #    self.m_vars = [var for var in self.t_vars if 'm_' in var.name]
 
             # loss and train
             with tf.variable_scope('loss'):
