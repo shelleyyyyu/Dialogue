@@ -57,7 +57,7 @@ conf = {
     "matching_max_step": 10000000000,
     "validation_step": 10,
 
-    "decay_steps": 400,
+    "decay_steps": 1000,
     "decay_rate": 0.9
 }
 

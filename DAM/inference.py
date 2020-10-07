@@ -14,6 +14,7 @@ import utils.evaluation as eva
 
 import bin.train_and_evaluate as train
 import bin.test_and_evaluate as test
+import bin.valid_and_evaluate as valid
 
 # configure
 
@@ -54,4 +55,5 @@ conf = {
 
 joint_model = joint_net.Net(conf)
 test.test(conf, joint_model)
+valid.test(conf, joint_model)
 
