@@ -35,7 +35,7 @@ def test(conf, _model):
 
         average_correction_rate = 0.0
 
-        score_file_path = conf['save_path'] + 'score.test'
+        score_file_path = conf['save_path'] + 'score.valid'
         score_file = open(score_file_path, 'w')
 
         print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + ' - starting test')
@@ -75,7 +75,7 @@ def test(conf, _model):
         #write evaluation result
         result = eva.evaluate(score_file_path)
         result.update(eva.evaluate_auc_from_file(score_file_path))
-        result_file_path = conf["save_path"] + "result.test"
+        result_file_path = conf["save_path"] + "result.valid"
         with open(result_file_path, 'w') as out_file:
             for key in result.keys():
                 r = '%.4f'%result[key]
