@@ -251,6 +251,22 @@ class Net(object):
                 m_t_a_r = tf.stack(m_t_a_r_stack, axis=-1)
                 m_r_a_t = tf.stack(m_r_a_t_stack, axis=-1)
 
+                def f1():
+                    return c_t_a_r, c_t_a_r, c_r_a_t, c_r_a_t
+                def f2():
+                    return c_t_a_r, m_t_a_r, c_r_a_t, m_r_a_t
+
+                tar1, tar2, rat1, rat2 = tf.case({tf.equal(self.is_pretrain_calibration, tf.constant(True)): f1,
+                                        tf.equal(self.is_pretrain_matching, tf.constant(True)): f1,
+                                        tf.equal(self.is_backprop_matching, tf.constant(True)): f2,
+                                        tf.equal(self.is_backprop_calibration, tf.constant(True)): f2},
+                            default=f1, exclusive=False)
+
+
+                #Combine with the calibration infos
+                m_t_a_r = tf.reduce_sum(tf.concat([tf.expand_dims(tar1, 0), tf.expand_dims(tar2, 0)], axis=0), axis=0)
+                m_r_a_t = tf.reduce_sum(tf.concat([tf.expand_dims(rat1, 0), tf.expand_dims(rat2, 0)], axis=0), axis=0)
+
                 # calculate similarity matrix
                 with tf.variable_scope('m_similarity'):
                     # sim shape [batch, max_turn_len, max_turn_len, 2*stack_num+1]
@@ -328,7 +344,7 @@ class Net(object):
                     grads_and_vars = Optimizer.compute_gradients(self.m_loss)
                     target_grads_and_vars = []
                     for grad, var in grads_and_vars:
-                        if grad is not None:
+                        if grad is not None and ('m_' in var.name or 'word_' in var.name):
                             target_grads_and_vars.append((grad, var))
                     print(len(target_grads_and_vars))
                     capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in target_grads_and_vars]

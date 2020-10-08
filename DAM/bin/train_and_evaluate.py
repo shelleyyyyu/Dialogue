@@ -314,7 +314,7 @@ def train(conf, _model):
                             _model._label: dev_batches["label"][batch_index]
                         }
 
-                        c_y_pred, m_y_pred = _sess.run([_model.c_y_pred, _model.m_y_pred], feed_dict=_feed)
+                        total_loss, c_y_pred, m_y_pred = _sess.run([_model.total_loss, _model.c_y_pred, _model.m_y_pred], feed_dict=_feed)
 
                         calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_y_pred]
                         calibrated_rate = 1 - accuracy_score(calibrated_label, dev_batches["label"][batch_index])
@@ -323,9 +323,9 @@ def train(conf, _model):
                         m_label_list.extend(dev_batches["label"][batch_index])
                         m_y_pred_list.extend(list(m_y_pred[:, -1]))
 
-                    print('Data Calibration Rate: %.4f' % (average_correction_rate/dev_batch_num))
+                    #print('Data Calibration Rate: %.4f' % (average_correction_rate/dev_batch_num))
                     result = eva.evaluate_auc(m_y_pred_list, m_label_list)
-                    print('Epoch %d - AUC: %.3f' %(epoch, result))
+                    print('Epoch %d - Calibrate rate: %.4f, Loss: %.6f, Auc: %.3f' %((average_correction_rate/dev_batch_num), epoch, total_loss, result))
                     if result > best_result:
                         best_result = result
                         save_path = _model.saver.save(_sess, conf["save_path"] + "joint_learning_model.ckpt." + str(int((step / conf["save_step"]))))

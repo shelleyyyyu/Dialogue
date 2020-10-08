@@ -43,7 +43,6 @@ def bilinear_sim_4d(x, y, is_nor=True):
     else:
         return sim
 
-
 def bilinear_sim(x, y, is_nor=True):
     '''calculate bilinear similarity with two tensor.
     Args:
@@ -282,7 +281,6 @@ def positional_encoding(x, min_timescale=1.0, max_timescale=1.0e4, value=0):
     signal = tf.expand_dims(signal, axis=0)
 
     return x + _lambda * signal
-
 
 def positional_encoding_vector(x, min_timescale=1.0, max_timescale=1.0e4, value=0):
     '''Adds a bunch of sinusoids of different frequencies to a tensor.
