@@ -306,7 +306,7 @@ def train(conf, _model):
                             _model.is_pretrain_calibration: False,
                             _model.is_pretrain_matching: False,
                             _model.is_backprop_calibration: False,
-                            _model.is_backprop_matching: False,
+                            _model.is_backprop_matching: True,
                             _model.calibration_type: conf['calibration_type'],
                             _model._turns: dev_batches["turns"][batch_index],
                             _model._tt_turns_len: dev_batches["tt_turns_len"][batch_index],

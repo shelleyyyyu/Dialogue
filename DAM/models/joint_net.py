@@ -260,7 +260,7 @@ class Net(object):
                                         tf.equal(self.is_pretrain_matching, tf.constant(True)): f1,
                                         tf.equal(self.is_backprop_matching, tf.constant(True)): f2,
                                         tf.equal(self.is_backprop_calibration, tf.constant(True)): f2},
-                            default=f1, exclusive=False)
+                            default=f2, exclusive=False)
 
 
                 #Combine with the calibration infos
@@ -383,7 +383,7 @@ class Net(object):
                      tf.equal(self.is_pretrain_matching, tf.constant(True)): m_loss_fn,
                      tf.equal(self.is_backprop_calibration, tf.constant(True)): c_m_loss_fn,
                      tf.equal(self.is_backprop_matching, tf.constant(True)): c_m_loss_fn2},
-                    default=c_m_loss_fn, exclusive=False)
+                    default=c_m_loss_fn2, exclusive=False)
 
 
         return self._graph
