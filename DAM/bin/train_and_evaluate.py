@@ -21,7 +21,7 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
     conf["print_step"] = int(max(1, batch_num / 100))
 
     # Indicators
-    average_loss, step, best_result = 0.0, 0, 0.0
+    average_loss, step, best_result, avg_acc = 0.0, 0, 0.0, 0.0
 
     for epoch in xrange(conf['calibration_pretrain_epoch']):
         #starting shuffle train data
@@ -43,13 +43,6 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
             }
 
             _, _curr_loss = _sess.run([_model.g_updates, _model.c_loss], feed_dict=_feed)
-
-            #ivy_test, shelly_test, tam_test, c_loss, m_loss, total_loss, capped_gvs, _, _curr_loss = \
-            #    _sess.run([_model.ivy_test, _model.shelly_test, _model.tam_test, _model.c_loss, _model.m_loss, _model.total_loss, _model.capped_gvs , _model.g_updates, _model.c_loss], feed_dict=_feed)
-            #print((c_loss, m_loss, total_loss))
-            #print(shelly_test, ivy_test, tam_test)
-            #print(len(capped_gvs))
-            #sys.exit()
             average_loss += _curr_loss
             step += 1
 
@@ -78,10 +71,12 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
                         _model._label: dev_batches["label"][batch_index]
                     }
 
-                    _, _y_pred = _sess.run([_model.c_logits, _model.c_y_pred], feed_dict=_feed)
+                    c_accuracy, _, _y_pred = _sess.run([_model.c_accuracy, _model.c_logits, _model.c_y_pred], feed_dict=_feed)
+                    avg_acc += c_accuracy
                     label_list.extend(dev_batches["label"][batch_index])
                     _y_pred_list.extend(list(_y_pred[:, -1]))
                 # write evaluation result
+                avg_acc = avg_acc / dev_batch_num
                 result = eva.evaluate_auc(_y_pred_list, label_list)
                 print('[Pretrain Calibration] Epoch %d - AUC: %.3f' % (epoch, result))
                 if result > best_result:
@@ -104,7 +99,7 @@ def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
     conf["print_step"] = int(max(1, batch_num / 100))
 
     # Indicators
-    average_loss, step, best_result = 0.0, 0, 0.0
+    average_loss, step, best_result, avg_accuracy = 0.0, 0, 0.0, 0.0
 
     for epoch in xrange(conf['matching_pretrain_epoch']):
         #starting shuffle train data
@@ -156,11 +151,13 @@ def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
                         _model._label: dev_batches["label"][batch_index]
                     }
 
-                    _, _y_pred = _sess.run([_model.m_logits, _model.m_y_pred], feed_dict=_feed)
+                    accuracy_score, _, _y_pred = _sess.run([_model.m_accuracy, _model.m_logits, _model.m_y_pred], feed_dict=_feed)
                     label_list.extend(dev_batches["label"][batch_index])
                     _y_pred_list.extend(list(_y_pred[:,-1]))
+                    avg_accuracy += accuracy_score
                 # write evaluation result
                 result = eva.evaluate_auc(_y_pred_list, label_list)
+                avg_accuracy = avg_accuracy / dev_batch_num
                 print('[Pretrain Matching] Epoch %d - AUC: %.3f' % (epoch, result))
                 if result > best_result:
                     best_result = result
@@ -192,7 +189,7 @@ def train(conf, _model):
 
     print('=' * 60 + '\n' + 'Calibration Network Pre-training' + '\n' + '=' * 60)
     with tf.Session(graph=_graph) as pre_c_sess:
-        _model.init.run()
+        pre_c_sess.run(tf.global_variables_initializer())
 
         if conf["init_model"] is not None:
             _model.saver.restore(pre_c_sess, os.path.join(conf["save_path"], conf["init_model"]))
@@ -206,7 +203,8 @@ def train(conf, _model):
 
     print('=' * 60 + '\n' + 'Matching Network Pre-training' + '\n' + '=' * 60)
     with tf.Session(graph=_graph) as pre_m_sess:
-        _model.init.run()
+        pre_m_sess.run(tf.global_variables_initializer())
+
         if conf["init_model"] is not None:
             _model.saver.restore(pre_m_sess, os.path.join(conf["save_path"], conf["init_model"]))
             print("success init model %s" % str(os.path.join(conf["save_path"], conf["init_model"])))
@@ -215,23 +213,11 @@ def train(conf, _model):
         if _pretrain_model_name != '' or None: conf["init_model"] = str(_pretrain_model_name)
         print('Pretrained Model Save Name (Matching): %s' % (str(conf["init_model"])))
 
-        # TODO - SHELLY - Test Graph Code
-        #t2 = pre_m_sess.graph.get_tensor_by_name('word_embedding:0')
-        #print(pre_m_sess.run(t2))
-
     tf.reset_default_graph()
-
-    # TODO - SHELLY - Test Graph Code
-    #with tf.Session(graph=_graph) as pre_m_sess:
-    #    if conf["init_model"] is not None:
-    #        _model.saver.restore(pre_m_sess, os.path.join(conf["save_path"], conf["init_model"]))
-    #        print("success init model %s" % str(os.path.join(conf["save_path"], conf["init_model"])))
-    #    t2 = pre_m_sess.graph.get_tensor_by_name('word_embedding:0')
-    #    print(pre_m_sess.run(t2))
 
     print('=' * 60 + '\n' + 'Joint Training' + '\n' + '=' * 60)
     with tf.Session(graph=_graph) as _sess:
-        _model.init.run()
+        _sess.run(tf.global_variables_initializer())
 
         if conf["init_model"] is not None:
             _model.saver.restore(_sess, os.path.join(conf["save_path"], conf["init_model"]))
@@ -303,11 +289,7 @@ def train(conf, _model):
                 if step % conf["print_step"] == 0 and step > 0:
                     g_step, lr = _sess.run([_model.global_step, _model.learning_rate])
                     print("processed: [%.4f]" % (float(step * 1.0 / batch_num)))
-                    if c_average_loss == 0:
-                        print("[Joint Model] - step: %d , lr: %f , m_loss: [%.6f]" % (
-                            g_step, lr, (m_average_loss / conf["print_step"])))
-                    else:
-                        print("[Joint Model] - step: %d , lr: %f , m_loss: [%.6f], c_loss: [%.6f]" %(
+                    print("[Joint Model] - step: %d , lr: %f , m_loss: [%.6f], c_loss: [%.6f]" %(
                             g_step, lr, (m_average_loss / conf["print_step"]), (c_average_loss / conf["print_step"])))
                     m_average_loss, c_average_loss = 0.0, 0.0
 
@@ -332,7 +314,7 @@ def train(conf, _model):
                             _model._label: dev_batches["label"][batch_index]
                         }
 
-                        _, c_y_pred, _, m_y_pred = _sess.run([_model.c_logits, _model.c_y_pred, _model.m_logits, _model.m_y_pred], feed_dict=_feed)
+                        c_y_pred, m_y_pred = _sess.run([_model.c_y_pred, _model.m_y_pred], feed_dict=_feed)
 
                         calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_y_pred]
                         calibrated_rate = 1 - accuracy_score(calibrated_label, dev_batches["label"][batch_index])

@@ -174,7 +174,7 @@ class Net(object):
             print('sim shape: %s' % c_sim.shape)
             with tf.variable_scope('c_cnn_aggregation'):
                 # for douban
-                c_final_info = layers.CNN_3d(c_sim, 16, 16)
+                c_final_info = layers.CNN_3d(c_sim, 32, 16)
 
             # ========== Matching Network ==========
 
@@ -264,12 +264,14 @@ class Net(object):
             print('sim shape: %s' % m_sim.shape)
             with tf.variable_scope('m_cnn_aggregation'):
                 # for douban
-                m_final_info = layers.CNN_3d(m_sim, 16, 16)
+                m_final_info = layers.CNN_3d(m_sim, 32, 16)
 
             # loss and train
             with tf.variable_scope('loss'):
                 # pass to linear transformation and softmax to get the logits and softmax-ed value y_pred
                 self.c_loss, self.c_logits, self.c_y_pred = layers.calibration_loss(c_final_info, self._label)
+                self.c_correct = tf.equal(tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.int32), tf.to_int32(self._label))
+                self.c_accuracy = tf.reduce_mean(tf.cast(self.c_correct, 'float'))
 
                 # Use the c_y_pred abd define the calibrated label for the matching model (classifier)
                 c_label = tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.float32)
@@ -289,14 +291,14 @@ class Net(object):
                                         tf.equal(self.calibration_type, tf.constant(2)): f_calibration_type_2},
                             default=f_pretrain_matching, exclusive=False)
 
-                # Pass to the loss function to -
-                # 1. pass to linear transformation and softmax to get the logits and softmax-ed value m_y_pred
-                # 2. the logits are then pass to calculate cross-entropy loss together with the defined target_label
-                # self.total_loss: gradient can backward to calibration network
-                self.m_loss, self.m_logits, self.m_y_pred = layers.loss(m_final_info, target_label)
 
+                self.m_loss, self.m_logits, self.m_y_pred = layers.loss(m_final_info, target_label)
+                self.m_correct = tf.equal(tf.cast(tf.argmax(self.m_y_pred, axis=1), tf.int32), tf.to_int32(target_label))
+                self.m_accuracy = tf.reduce_mean(tf.cast(self.m_correct, 'float'))
                 self.total_loss = self.m_loss+self.c_loss
+
                 # Start update the network variable
+                self.saver = tf.train.Saver(max_to_keep=self._conf["max_to_keep"])
                 self.global_step = tf.Variable(0, trainable=False)
                 initial_learning_rate = self._conf['learning_rate']
                 self.learning_rate = tf.train.exponential_decay(
@@ -305,74 +307,69 @@ class Net(object):
                     decay_steps=self._conf['decay_steps'],
                     decay_rate=self._conf['decay_rate'],
                     staircase=True)
+
                 Optimizer = tf.train.AdamOptimizer(self.learning_rate)
 
                 def c_loss_fn():
-                    self.optimizer = Optimizer.minimize(self.c_loss, global_step=self.global_step)
+                    optimizer = Optimizer.minimize(self.c_loss, global_step=self.global_step)
                     grads_and_vars = Optimizer.compute_gradients(self.c_loss)
                     target_grads_and_vars = []
                     for grad, var in grads_and_vars:
                         if grad is not None:
                             target_grads_and_vars.append((grad, var))
-                    print(target_grads_and_vars[-1])
+                    print(len(target_grads_and_vars))
                     capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in target_grads_and_vars]
                     g_updates = Optimizer.apply_gradients(
                         capped_gvs,
                         global_step=self.global_step)
-                    return g_updates, capped_gvs, tf.constant(111)
+                    return optimizer, g_updates, capped_gvs, tf.constant(111)
                 def m_loss_fn():
-                    self.optimizer = Optimizer.minimize(self.m_loss, global_step=self.global_step)
+                    optimizer = Optimizer.minimize(self.m_loss, global_step=self.global_step)
                     grads_and_vars = Optimizer.compute_gradients(self.m_loss)
                     target_grads_and_vars = []
                     for grad, var in grads_and_vars:
                         if grad is not None:
                             target_grads_and_vars.append((grad, var))
-                    print(target_grads_and_vars[-1])
+                    print(len(target_grads_and_vars))
                     capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in target_grads_and_vars]
                     g_updates = Optimizer.apply_gradients(
                         capped_gvs,
                         global_step=self.global_step)
-                    return g_updates, capped_gvs, tf.constant(222)
+                    return optimizer, g_updates, capped_gvs, tf.constant(222)
                 def c_m_loss_fn():
-                    self.optimizer = Optimizer.minimize(self.total_loss, global_step=self.global_step)
+                    optimizer = Optimizer.minimize(self.total_loss, global_step=self.global_step)
                     grads_and_vars = Optimizer.compute_gradients(self.total_loss)
                     target_grads_and_vars = []
                     for grad, var in grads_and_vars:
                         if grad is not None and ('c_' in var.name or 'word_' in var.name):
                             target_grads_and_vars.append((grad, var))
-                    print(target_grads_and_vars[-1])
+                    print(len(target_grads_and_vars))
                     capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in target_grads_and_vars]
                     g_updates = Optimizer.apply_gradients(
                         capped_gvs,
                         global_step=self.global_step)
-                    return g_updates, capped_gvs, tf.constant(333)
-
+                    return optimizer, g_updates, capped_gvs, tf.constant(333)
                 def c_m_loss_fn2():
-                    self.optimizer = Optimizer.minimize(self.total_loss, global_step=self.global_step)
+                    optimizer = Optimizer.minimize(self.total_loss, global_step=self.global_step)
                     grads_and_vars = Optimizer.compute_gradients(self.total_loss)
                     target_grads_and_vars = []
                     for grad, var in grads_and_vars:
                         if grad is not None and ('m_' in var.name or 'word_' in var.name):
                             target_grads_and_vars.append((grad, var))
-                    print(target_grads_and_vars[-1])
+                    print(len(target_grads_and_vars))
                     capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in target_grads_and_vars]
                     g_updates = Optimizer.apply_gradients(
                         capped_gvs,
                         global_step=self.global_step)
-                    return g_updates, capped_gvs, tf.constant(444)
+                    return optimizer, g_updates, capped_gvs, tf.constant(444)
 
-                self.g_updates, self.capped_gvs, self.ivy_test = tf.case(
+                self.optimizer, self.g_updates, self.capped_gvs, self.ivy_test = tf.case(
                     {tf.equal(self.is_pretrain_calibration, tf.constant(True)): c_loss_fn,
                      tf.equal(self.is_pretrain_matching, tf.constant(True)): m_loss_fn,
                      tf.equal(self.is_backprop_calibration, tf.constant(True)): c_m_loss_fn,
                      tf.equal(self.is_backprop_matching, tf.constant(True)): c_m_loss_fn2},
                     default=c_m_loss_fn, exclusive=False)
 
-                # all gradients and variables
-                self.init = tf.global_variables_initializer()
-                self.saver = tf.train.Saver(max_to_keep=self._conf["max_to_keep"])
-                self.all_variables = tf.global_variables()
-                self.all_operations = self._graph.get_operations()
 
         return self._graph
 
