@@ -232,7 +232,8 @@ def train(conf, _model):
         conf["print_step"] = int(max(1, batch_num / 100))
 
         # Indicators
-        m_average_loss, c_average_loss, step, best_result = 0.0, 0.0, 0, 0.0
+        m_m_loss, c_m_loss = 0.0, 0.0
+        step, best_result = 0, 0.0
         #c_summaries, m_summaries = None, None
         for epoch in xrange(conf["num_scan_data"]):
             print('starting shuffle train data')
@@ -257,9 +258,9 @@ def train(conf, _model):
                     _model._label: train_batches["label"][batch_index]
                 }
 
-                total_loss, g_updates = _sess.run([_model.total_loss, _model.g_updates], feed_dict=_feed)
+                m_loss, g_updates = _sess.run([_model.m_loss, _model.g_updates], feed_dict=_feed)
 
-                m_average_loss += total_loss
+                m_m_loss += m_loss
 
                 # -------------------- Calibration Model Optimisation ------------------- #
                 if step % conf['validation_step'] == 0:
@@ -281,8 +282,9 @@ def train(conf, _model):
                             _model._label: validation_batches["label"][validation_batch_index]
                         }
 
-                        total_loss, g_updates = _sess.run([_model.total_loss, _model.g_updates], feed_dict=_feed)
-                        c_average_loss += total_loss
+                        m_loss, g_updates = _sess.run([_model.m_loss, _model.g_updates], feed_dict=_feed)
+
+                        c_m_loss += m_loss
 
                 step += 1
 
@@ -290,8 +292,8 @@ def train(conf, _model):
                     g_step, lr = _sess.run([_model.global_step, _model.learning_rate])
                     print("processed: [%.4f]" % (float(step * 1.0 / batch_num)))
                     print("[Joint Model] - step: %d , lr: %f , m_loss: [%.6f], c_loss: [%.6f]" %(
-                            g_step, lr, (m_average_loss / conf["print_step"]), (c_average_loss / conf["print_step"])))
-                    m_average_loss, c_average_loss = 0.0, 0.0
+                            g_step, lr, (m_m_loss / conf["print_step"]), (c_m_loss / conf["print_step"])))
+                    m_m_loss, c_m_loss = 0.0, 0.0
 
                 if step % conf["save_step"] == 0 and step > 0:
                     index = step / conf['save_step']
@@ -314,7 +316,7 @@ def train(conf, _model):
                             _model._label: dev_batches["label"][batch_index]
                         }
 
-                        total_loss, c_y_pred, m_y_pred = _sess.run([_model.total_loss, _model.c_y_pred, _model.m_y_pred], feed_dict=_feed)
+                        m_loss, c_y_pred, m_y_pred = _sess.run([_model.m_loss, _model.c_y_pred, _model.m_y_pred], feed_dict=_feed)
 
                         calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_y_pred]
                         calibrated_rate = 1 - accuracy_score(calibrated_label, dev_batches["label"][batch_index])
@@ -325,7 +327,8 @@ def train(conf, _model):
 
                     #print('Data Calibration Rate: %.4f' % (average_correction_rate/dev_batch_num))
                     result = eva.evaluate_auc(m_y_pred_list, m_label_list)
-                    print('Epoch %d - Calibrate rate: %.4f, Loss: %.6f, Auc: %.3f' %((average_correction_rate/dev_batch_num), epoch, total_loss, result))
+                    loss_str = "%.6f" %(m_loss)
+                    print('Epoch %d - Calibrate rate: %.4f, Loss: %s, Auc: %.3f' %((average_correction_rate/dev_batch_num), epoch, loss_str, result))
                     if result > best_result:
                         best_result = result
                         save_path = _model.saver.save(_sess, conf["save_path"] + "joint_learning_model.ckpt." + str(int((step / conf["save_step"]))))

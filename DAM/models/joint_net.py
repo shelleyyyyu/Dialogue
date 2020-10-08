@@ -311,7 +311,7 @@ class Net(object):
                 self.m_loss, self.m_logits, self.m_y_pred = layers.loss(m_final_info, target_label)
                 self.m_correct = tf.equal(tf.cast(tf.argmax(self.m_y_pred, axis=1), tf.int32), tf.to_int32(target_label))
                 self.m_accuracy = tf.reduce_mean(tf.cast(self.m_correct, 'float'))
-                self.total_loss = self.m_loss+self.c_loss
+                #self.total_loss = self.m_loss+self.c_loss
 
                 # Start update the network variable
                 self.saver = tf.train.Saver(max_to_keep=self._conf["max_to_keep"])
@@ -327,7 +327,7 @@ class Net(object):
                 Optimizer = tf.train.AdamOptimizer(self.learning_rate)
 
                 def c_loss_fn():
-                    optimizer = Optimizer.minimize(self.c_loss, global_step=self.global_step)
+                    self.optimizer = Optimizer.minimize(self.c_loss, global_step=self.global_step)
                     grads_and_vars = Optimizer.compute_gradients(self.c_loss)
                     target_grads_and_vars = []
                     for grad, var in grads_and_vars:
@@ -338,9 +338,9 @@ class Net(object):
                     g_updates = Optimizer.apply_gradients(
                         capped_gvs,
                         global_step=self.global_step)
-                    return optimizer, g_updates, capped_gvs, tf.constant(111)
+                    return g_updates, tf.constant(111)
                 def m_loss_fn():
-                    optimizer = Optimizer.minimize(self.m_loss, global_step=self.global_step)
+                    self.optimizer = Optimizer.minimize(self.m_loss, global_step=self.global_step)
                     grads_and_vars = Optimizer.compute_gradients(self.m_loss)
                     target_grads_and_vars = []
                     for grad, var in grads_and_vars:
@@ -351,10 +351,10 @@ class Net(object):
                     g_updates = Optimizer.apply_gradients(
                         capped_gvs,
                         global_step=self.global_step)
-                    return optimizer, g_updates, capped_gvs, tf.constant(222)
+                    return g_updates, tf.constant(222)
                 def c_m_loss_fn():
-                    optimizer = Optimizer.minimize(self.total_loss, global_step=self.global_step)
-                    grads_and_vars = Optimizer.compute_gradients(self.total_loss)
+                    self.optimizer = Optimizer.minimize(self.m_loss, global_step=self.global_step)
+                    grads_and_vars = Optimizer.compute_gradients(self.m_loss)
                     target_grads_and_vars = []
                     for grad, var in grads_and_vars:
                         if grad is not None and ('c_' in var.name or 'word_' in var.name):
@@ -364,10 +364,10 @@ class Net(object):
                     g_updates = Optimizer.apply_gradients(
                         capped_gvs,
                         global_step=self.global_step)
-                    return optimizer, g_updates, capped_gvs, tf.constant(333)
+                    return g_updates, tf.constant(333)
                 def c_m_loss_fn2():
-                    optimizer = Optimizer.minimize(self.total_loss, global_step=self.global_step)
-                    grads_and_vars = Optimizer.compute_gradients(self.total_loss)
+                    self.optimizer = Optimizer.minimize(self.m_loss, global_step=self.global_step)
+                    grads_and_vars = Optimizer.compute_gradients(self.m_loss)
                     target_grads_and_vars = []
                     for grad, var in grads_and_vars:
                         if grad is not None and ('m_' in var.name or 'word_' in var.name):
@@ -377,10 +377,9 @@ class Net(object):
                     g_updates = Optimizer.apply_gradients(
                         capped_gvs,
                         global_step=self.global_step)
-                    return optimizer, g_updates, capped_gvs, tf.constant(444)
+                    return g_updates, tf.constant(444)
 
-                self.optimizer, self.g_updates, self.capped_gvs, self.ivy_test = tf.case(
-                    {tf.equal(self.is_pretrain_calibration, tf.constant(True)): c_loss_fn,
+                self.g_updates, test = tf.case({tf.equal(self.is_pretrain_calibration, tf.constant(True)): c_loss_fn,
                      tf.equal(self.is_pretrain_matching, tf.constant(True)): m_loss_fn,
                      tf.equal(self.is_backprop_calibration, tf.constant(True)): c_m_loss_fn,
                      tf.equal(self.is_backprop_matching, tf.constant(True)): c_m_loss_fn2},
