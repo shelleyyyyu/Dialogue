@@ -282,9 +282,9 @@ def train(conf, _model):
                             _model._label: validation_batches["label"][validation_batch_index]
                         }
 
-                        m_loss, g_updates = _sess.run([_model.total_loss, _model.g_updates], feed_dict=_feed)
+                        c_loss, g_updates = _sess.run([_model.c_loss, _model.g_updates], feed_dict=_feed)
 
-                        c_m_loss += m_loss
+                        c_m_loss += c_loss
 
                 step += 1
 
@@ -303,10 +303,10 @@ def train(conf, _model):
                     for batch_index in xrange(dev_batch_num):
 
                         _feed = {
-                            _model.is_pretrain_calibration: False,
-                            _model.is_pretrain_matching: False,
+                            _model.is_pretrain_calibration: True,
+                            _model.is_pretrain_matching: True,
                             _model.is_backprop_calibration: False,
-                            _model.is_backprop_matching: True,
+                            _model.is_backprop_matching: False,
                             _model.calibration_type: conf['calibration_type'],
                             _model._turns: dev_batches["turns"][batch_index],
                             _model._tt_turns_len: dev_batches["tt_turns_len"][batch_index],
@@ -316,14 +316,14 @@ def train(conf, _model):
                             _model._label: dev_batches["label"][batch_index]
                         }
 
-                        total_loss, c_y_pred, m_y_pred = _sess.run([_model.total_loss, _model.c_y_pred, _model.m_y_pred], feed_dict=_feed)
+                        c_y_pred, m_y_pred = _sess.run([_model.c_y_pred, _model.m_y_pred], feed_dict=_feed)
                         calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_y_pred]
                         origin_label = ['1', '0'] * int(len(calibrated_label) / 2)
                         calibrated_rate = 1 - accuracy_score(calibrated_label, origin_label)
                         calibrated_correctness = accuracy_score(calibrated_label, dev_batches["label"][batch_index])
                         average_calibrate_rate += calibrated_rate
                         average_calibrated_correctness += calibrated_correctness
-                        #out_label = ['1' if scores[1] > scores[0] else '0' for scores in m_y_pred]
+                        out_label = ['1' if scores[1] > scores[0] else '0' for scores in m_y_pred]
                         #print(origin_label)
                         #print(calibrated_label)
                         #print(calibrated_rate)
@@ -342,9 +342,9 @@ def train(conf, _model):
 
                     #print('Data Calibration Rate: %.4f' % (average_correction_rate/dev_batch_num))
                     result = eva.evaluate_auc(m_y_pred_list, m_label_list)
-                    loss_str = "%.6f" %(m_loss)
-                    print('Epoch %d - Calibrate rate: %.4f; correctness: %.4f, Loss: %s, Auc: %.3f' %(epoch, (average_calibrate_rate/dev_batch_num), (average_calibrated_correctness/dev_batch_num), loss_str, result))
-                    if result > best_result:
+                    #loss_str = "%.6f" %(m_loss)
+                    print('Epoch %d - Calibrate rate: %.4f; correctness: %.4f, Matching Auc: %.4f' %(epoch, (average_calibrate_rate/dev_batch_num), (average_calibrated_correctness/dev_batch_num), result))
+                    if result+average_calibrated_correctness > best_result:
                         best_result = result
                         save_path = _model.saver.save(_sess, conf["save_path"] + "joint_learning_model.ckpt." + str(int((step / conf["save_step"]))))
                         print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + " - finish evaluation - success saving model in " + save_path)
