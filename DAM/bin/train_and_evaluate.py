@@ -344,8 +344,8 @@ def train(conf, _model):
                     result = eva.evaluate_auc(m_y_pred_list, m_label_list)
                     #loss_str = "%.6f" %(m_loss)
                     print('Epoch %d - Calibrate rate: %.4f; correctness: %.4f, Matching Auc: %.4f' %(epoch, (average_calibrate_rate/dev_batch_num), (average_calibrated_correctness/dev_batch_num), result))
-                    if result+average_calibrated_correctness > best_result:
-                        best_result = result
+                    if result + average_calibrated_correctness > best_result:
+                        best_result = result + average_calibrated_correctness
                         save_path = _model.saver.save(_sess, conf["save_path"] + "joint_learning_model.ckpt." + str(int((step / conf["save_step"]))))
                         print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + " - finish evaluation - success saving model in " + save_path)
 
