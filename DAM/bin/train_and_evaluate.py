@@ -180,7 +180,7 @@ def train(conf, _model):
     # load data
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - start loading data')
     train_data, dev_data, test_data, validation_data = pickle.load(open(conf["data_path"], 'rb'))
-    dev_batches = reader.build_batches(dev_data, conf)
+    dev_batches = reader.build_batches(validation_data, conf)
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - Finish Data Pre-processing')
     #Print configuration setting
     print('configurations: %s' %conf)
@@ -298,7 +298,7 @@ def train(conf, _model):
                 if step % conf["save_step"] == 0 and step > 0:
                     index = step / conf['save_step']
                     print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + ' - save step: %s' %index)
-                    average_correction_rate = 0.0
+                    average_calibrate_rate, average_calibrated_correctness = 0.0, 0.0
                     m_label_list, c_label_list, m_y_pred_list, c_y_pred_list = [], [], [], []
                     for batch_index in xrange(dev_batch_num):
 
@@ -317,18 +317,33 @@ def train(conf, _model):
                         }
 
                         m_loss, c_y_pred, m_y_pred = _sess.run([_model.m_loss, _model.c_y_pred, _model.m_y_pred], feed_dict=_feed)
-
                         calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_y_pred]
-                        calibrated_rate = 1 - accuracy_score(calibrated_label, dev_batches["label"][batch_index])
-                        average_correction_rate += calibrated_rate
-
+                        origin_label = ['1', '0'] * int(len(calibrated_label) / 2)
+                        calibrated_rate = 1 - accuracy_score(calibrated_label, origin_label)
+                        calibrated_correctness = accuracy_score(calibrated_label, dev_batches["label"][batch_index])
+                        average_calibrate_rate += calibrated_rate
+                        average_calibrated_correctness += calibrated_correctness
+                        #out_label = ['1' if scores[1] > scores[0] else '0' for scores in m_y_pred]
+                        #print(origin_label)
+                        #print(calibrated_label)
+                        #print(calibrated_rate)
+                        #print(calibrated_rate)
+                        #print(average_calibrate_rate)
+                        #print(calibrated_correctness)
+                        #print(average_calibrated_correctness)
+                        #print('-'*30)
+                        #print(list(m_y_pred[:, -1]))
+                        #print(out_label)
+                        #print(dev_batches["label"][batch_index])
+                        #print(accuracy_score(out_label, dev_batches["label"][batch_index]))
+                        #print('-'*30)
                         m_label_list.extend(dev_batches["label"][batch_index])
                         m_y_pred_list.extend(list(m_y_pred[:, -1]))
 
                     #print('Data Calibration Rate: %.4f' % (average_correction_rate/dev_batch_num))
                     result = eva.evaluate_auc(m_y_pred_list, m_label_list)
                     loss_str = "%.6f" %(m_loss)
-                    print('Epoch %d - Calibrate rate: %.4f, Loss: %s, Auc: %.3f' %((average_correction_rate/dev_batch_num), epoch, loss_str, result))
+                    print('Epoch %d - Calibrate rate: %.4f; correctness: %.4f, Loss: %s, Auc: %.3f' %(epoch, (average_calibrate_rate/dev_batch_num), (average_calibrated_correctness/dev_batch_num), loss_str, result))
                     if result > best_result:
                         best_result = result
                         save_path = _model.saver.save(_sess, conf["save_path"] + "joint_learning_model.ckpt." + str(int((step / conf["save_step"]))))
