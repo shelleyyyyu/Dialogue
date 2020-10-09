@@ -189,7 +189,7 @@ def train(conf, _model):
 
     print('=' * 60 + '\n' + 'Calibration Network Pre-training' + '\n' + '=' * 60)
     with tf.Session(graph=_graph) as pre_c_sess:
-        pre_c_sess.run(tf.global_variables_initializer())
+        tf.global_variables_initializer().run()
 
         if conf["init_model"] is not None:
             _model.saver.restore(pre_c_sess, os.path.join(conf["save_path"], conf["init_model"]))
@@ -203,7 +203,7 @@ def train(conf, _model):
 
     print('=' * 60 + '\n' + 'Matching Network Pre-training' + '\n' + '=' * 60)
     with tf.Session(graph=_graph) as pre_m_sess:
-        pre_m_sess.run(tf.global_variables_initializer())
+        tf.global_variables_initializer().run()
 
         if conf["init_model"] is not None:
             _model.saver.restore(pre_m_sess, os.path.join(conf["save_path"], conf["init_model"]))
@@ -217,7 +217,7 @@ def train(conf, _model):
 
     print('=' * 60 + '\n' + 'Joint Training' + '\n' + '=' * 60)
     with tf.Session(graph=_graph) as _sess:
-        _sess.run(tf.global_variables_initializer())
+        tf.global_variables_initializer().run()
 
         if conf["init_model"] is not None:
             _model.saver.restore(_sess, os.path.join(conf["save_path"], conf["init_model"]))
@@ -282,7 +282,7 @@ def train(conf, _model):
                             _model._label: validation_batches["label"][validation_batch_index]
                         }
 
-                        m_loss, g_updates = _sess.run([_model.m_loss, _model.g_updates], feed_dict=_feed)
+                        m_loss, g_updates = _sess.run([_model.total_loss, _model.g_updates], feed_dict=_feed)
 
                         c_m_loss += m_loss
 
@@ -316,7 +316,7 @@ def train(conf, _model):
                             _model._label: dev_batches["label"][batch_index]
                         }
 
-                        m_loss, c_y_pred, m_y_pred = _sess.run([_model.m_loss, _model.c_y_pred, _model.m_y_pred], feed_dict=_feed)
+                        total_loss, c_y_pred, m_y_pred = _sess.run([_model.total_loss, _model.c_y_pred, _model.m_y_pred], feed_dict=_feed)
                         calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_y_pred]
                         origin_label = ['1', '0'] * int(len(calibrated_label) / 2)
                         calibrated_rate = 1 - accuracy_score(calibrated_label, origin_label)
