@@ -252,7 +252,7 @@ class Net(object):
                 m_r_a_t = tf.stack(m_r_a_t_stack, axis=-1)
 
                 def f1():
-                    return c_t_a_r, c_t_a_r, c_r_a_t, c_r_a_t
+                    return m_t_a_r, m_t_a_r, m_r_a_t, m_r_a_t
                 def f2():
                     return c_t_a_r, m_t_a_r, c_r_a_t, m_r_a_t
 
@@ -264,8 +264,8 @@ class Net(object):
 
 
                 #Combine with the calibration infos
-                m_t_a_r = tf.reduce_sum(tf.concat([tf.expand_dims(tar1, 0), tf.expand_dims(tar2, 0)], axis=0), axis=0)
-                m_r_a_t = tf.reduce_sum(tf.concat([tf.expand_dims(rat1, 0), tf.expand_dims(rat2, 0)], axis=0), axis=0)
+                m_t_a_r = tf.reduce_mean(tf.concat([tf.expand_dims(tar1, 0), tf.expand_dims(tar2, 0)], axis=0), axis=0)
+                m_r_a_t = tf.reduce_mean(tf.concat([tf.expand_dims(rat1, 0), tf.expand_dims(rat2, 0)], axis=0), axis=0)
 
                 # calculate similarity matrix
                 with tf.variable_scope('m_similarity'):
