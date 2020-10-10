@@ -72,8 +72,30 @@ def evaluate(file_path):
     #print('MAP: %s' %(1.0*sum_m_a_p/total_num))
     #print('MRR: %s' %(1.0*sum_m_r_r/total_num))
     #print('P@1: %s' %(1.0*sum_p_1/total_num))
-    return (1.0*sum_m_a_p/total_num, 1.0*sum_m_r_r/total_num, 1.0*sum_p_1/total_num, 
-            1.0*sum_r_1/total_num, 1.0*sum_r_2/total_num, 1.0*sum_r_5/total_num)
+
+    eva_dict['MAP'] = 1.0 * sum_m_a_p / total_num
+    eva_dict['MRR'] = 1.0 * sum_m_r_r / total_num
+    eva_dict['P@1'] = 1.0 * sum_p_1 / total_num
+    eva_dict['R10@1'] = 1.0 * sum_r_1 / total_num
+    eva_dict['R10@2'] = 1.0 * sum_r_2 / total_num
+    # eva_dict['R10@5'] = 1.0*sum_r_5/total_num
+    return eva_dict
+    #return (1.0*sum_m_a_p/total_num, 1.0*sum_m_r_r/total_num, 1.0*sum_p_1/total_num,
+    #        1.0*sum_r_1/total_num, 1.0*sum_r_2/total_num, 1.0*sum_r_5/total_num)
+
+def evaluate_auc_from_file(file_path):
+    eva_dict = {}
+    m_prob_1_list, m_pred_label_list, truth_label_list = [], [], []
+    with open(file_path, 'r') as file:
+		for line in file:
+			line = line.strip()
+			tokens = line.split("\t")
+			m_prob_1_list.append(float(tokens[1]))
+			m_pred_label_list.append(1 if tokens[1] > 0.5 else 0)
+			truth_label_list.append(int(tokens[2]))
+    eva_dict['final_auc'] = roc_auc_score(truth_label_list, m_prob_1_list)
+    eva_dict['final_acc'] = accuracy_score(truth_label_list, m_pred_label_list)
+    return eva_dict
 
 if __name__ == '__main__':
     result = evaluate(sys.argv[1])

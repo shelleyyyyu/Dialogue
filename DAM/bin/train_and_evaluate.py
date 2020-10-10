@@ -21,7 +21,7 @@ def train(conf, _model):
     # load data
     print('starting loading data')
     print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())))
-    train_data, val_data, test_data, _ = pickle.load(open(conf["data_path"], 'rb'))
+    train_data, test_data, val_data = pickle.load(open(conf["data_path"], 'rb'))
     print('finish loading data')
     print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())))
 
