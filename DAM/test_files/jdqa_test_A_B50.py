@@ -19,8 +19,8 @@ import bin.test_and_evaluate as test
 conf = {
     "data_path": "./data/jdqa/data.pkl",
     "word_emb_init": "./data/jdqa/word_embedding.pkl",
-    "save_path": "./output/jdqa_A_B200/",
-    "init_model": "./output/jdqa_A_B200/joint_learning_model.ckpt.4", #should be set for test
+    "save_path": "./output/jdqa_A_B50/",
+    "init_model": "./output/jdqa_A_B50/joint_learning_model.ckpt.4", #should be set for test
 
     "rand_seed": None, 
 
