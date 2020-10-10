@@ -69,8 +69,3 @@ conf = {
 
 joint_model = joint_net.Net(conf)
 test.test(conf, joint_model, type='test')
-joint_model = joint_net.Net(conf)
-test.test(conf, joint_model, type='valid')
-joint_model = joint_net.Net(conf)
-test.test(conf, joint_model, type='train')
-
