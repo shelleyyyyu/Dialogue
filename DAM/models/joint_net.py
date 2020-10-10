@@ -41,8 +41,14 @@ class Net(object):
             else:
                 word_embedding_initializer = tf.random_normal_initializer(stddev=0.1)
 
-            self.word_embedding = tf.get_variable(
-                name='word_embedding',
+            self.c_word_embedding = tf.get_variable(
+                name='c_word_embedding',
+                shape=[self._conf['vocab_size'] + 1, self._conf['emb_size']],
+                dtype=tf.float32,
+                initializer=word_embedding_initializer)
+
+            self.m_word_embedding = tf.get_variable(
+                name='m_word_embedding',
                 shape=[self._conf['vocab_size'] + 1, self._conf['emb_size']],
                 dtype=tf.float32,
                 initializer=word_embedding_initializer)
@@ -89,7 +95,7 @@ class Net(object):
 
             # define operations
             # response part
-            c_Hr = tf.nn.embedding_lookup(self.word_embedding, self._response)
+            c_Hr = tf.nn.embedding_lookup(self.c_word_embedding, self._response)
 
             if self._conf['is_positional'] and self._conf['c_stack_num'] > 0:
                 with tf.variable_scope('c_positional'):
@@ -111,7 +117,7 @@ class Net(object):
             c_sim_turns = []
             # for every turn_t calculate matching vector
             for c_turn_t, c_t_turn_length in zip(c_list_turn_t, c_list_turn_length):
-                c_Hu = tf.nn.embedding_lookup(self.word_embedding, c_turn_t)  # [batch, max_turn_len, emb_size]
+                c_Hu = tf.nn.embedding_lookup(self.c_word_embedding, c_turn_t)  # [batch, max_turn_len, emb_size]
 
                 if self._conf['is_positional'] and self._conf['c_stack_num'] > 0:
                     with tf.variable_scope('c_positional', reuse=True):
@@ -180,7 +186,7 @@ class Net(object):
 
             # define operations
             # response part
-            m_Hr = tf.nn.embedding_lookup(self.word_embedding, self._response)
+            m_Hr = tf.nn.embedding_lookup(self.m_word_embedding, self._response)
 
             if self._conf['is_positional'] and self._conf['stack_num'] > 0:
                 with tf.variable_scope('m_positional'):
@@ -202,7 +208,7 @@ class Net(object):
             m_sim_turns = []
             # for every turn_t calculate matching vector
             for m_turn_t, m_t_turn_length in zip(m_list_turn_t, m_list_turn_length):
-                m_Hu = tf.nn.embedding_lookup(self.word_embedding, m_turn_t)  # [batch, max_turn_len, emb_size]
+                m_Hu = tf.nn.embedding_lookup(self.m_word_embedding, m_turn_t)  # [batch, max_turn_len, emb_size]
 
                 if self._conf['is_positional'] and self._conf['stack_num'] > 0:
                     with tf.variable_scope('m_positional', reuse=True):
@@ -251,21 +257,23 @@ class Net(object):
                 m_t_a_r = tf.stack(m_t_a_r_stack, axis=-1)
                 m_r_a_t = tf.stack(m_r_a_t_stack, axis=-1)
 
-                def f1():
-                    return m_t_a_r, m_t_a_r, m_r_a_t, m_r_a_t
-                def f2():
-                    return c_t_a_r, m_t_a_r, c_r_a_t, m_r_a_t
+                with tf.variable_scope('m_merge_rep'):
 
-                tar1, tar2, rat1, rat2 = tf.case({tf.equal(self.is_pretrain_calibration, tf.constant(True)): f1,
-                                        tf.equal(self.is_pretrain_matching, tf.constant(True)): f1,
-                                        tf.equal(self.is_backprop_matching, tf.constant(True)): f2,
-                                        tf.equal(self.is_backprop_calibration, tf.constant(True)): f2},
-                            default=f2, exclusive=False)
+                    def f1():
+                        return m_t_a_r, m_t_a_r, m_r_a_t, m_r_a_t
+                    def f2():
+                        return c_t_a_r, m_t_a_r, c_r_a_t, m_r_a_t
+
+                    tar1, tar2, rat1, rat2 = tf.case({tf.equal(self.is_pretrain_calibration, tf.constant(True)): f1,
+                                            tf.equal(self.is_pretrain_matching, tf.constant(True)): f1,
+                                            tf.equal(self.is_backprop_matching, tf.constant(True)): f2,
+                                            tf.equal(self.is_backprop_calibration, tf.constant(True)): f2},
+                                default=f2, exclusive=False)
 
 
-                #Combine with the calibration infos
-                m_t_a_r = tf.reduce_mean(tf.concat([tf.expand_dims(tar1, 0), tf.expand_dims(tar2, 0)], axis=0), axis=0)
-                m_r_a_t = tf.reduce_mean(tf.concat([tf.expand_dims(rat1, 0), tf.expand_dims(rat2, 0)], axis=0), axis=0)
+                    #Combine with the calibration infos
+                    m_t_a_r = tf.reduce_mean(tf.concat([tf.expand_dims(tar1, 0), tf.expand_dims(tar2, 0)], axis=0), axis=0)
+                    m_r_a_t = tf.reduce_mean(tf.concat([tf.expand_dims(rat1, 0), tf.expand_dims(rat2, 0)], axis=0), axis=0)
 
                 # calculate similarity matrix
                 with tf.variable_scope('m_similarity'):
@@ -331,7 +339,7 @@ class Net(object):
                     grads_and_vars = Optimizer.compute_gradients(self.c_loss)
                     target_grads_and_vars = []
                     for grad, var in grads_and_vars:
-                        if grad is not None:
+                        if grad is not None and ('c_' in var.name):
                             target_grads_and_vars.append((grad, var))
                     print(len(target_grads_and_vars))
                     capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in target_grads_and_vars]
@@ -370,7 +378,7 @@ class Net(object):
                     grads_and_vars = Optimizer.compute_gradients(self.m_loss)
                     target_grads_and_vars = []
                     for grad, var in grads_and_vars:
-                        if grad is not None and ('m_' in var.name):
+                        if grad is not None: #and ('m_' in var.name):
                             target_grads_and_vars.append((grad, var))
                     print(len(target_grads_and_vars))
                     capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in target_grads_and_vars]
