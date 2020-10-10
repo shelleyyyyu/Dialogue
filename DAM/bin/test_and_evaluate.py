@@ -71,7 +71,7 @@ def test(conf, _model):
         # write evaluation result
         result = eva.evaluate_auc_from_file(score_file_path)
         result.update(eva.evaluate(score_file_path))
-        result_file_path = conf["save_path"] + "result." + type
+        result_file_path = conf["save_path"] + "result.test"
         with open(result_file_path, 'w') as out_file:
             for key in result.keys():
                 r = '%.4f' % result[key]
