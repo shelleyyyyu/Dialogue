@@ -72,7 +72,7 @@ def evaluate(file_path):
     #print('MAP: %s' %(1.0*sum_m_a_p/total_num))
     #print('MRR: %s' %(1.0*sum_m_r_r/total_num))
     #print('P@1: %s' %(1.0*sum_p_1/total_num))
-
+    eva_dict={}
     eva_dict['MAP'] = 1.0 * sum_m_a_p / total_num
     eva_dict['MRR'] = 1.0 * sum_m_r_r / total_num
     eva_dict['P@1'] = 1.0 * sum_p_1 / total_num
