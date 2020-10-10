@@ -81,8 +81,8 @@ def test(conf, _model, type='test'):
         print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + ' - finish test')
         
         #write evaluation result
-        result = eva.evaluate(score_file_path)
-        result.update(eva.evaluate_auc_from_file(score_file_path))
+        #result = eva.evaluate(score_file_path)
+        result = eva.evaluate_auc_from_file(score_file_path)
         result_file_path = conf["save_path"] + "result." + type
         with open(result_file_path, 'w') as out_file:
             for key in result.keys():
