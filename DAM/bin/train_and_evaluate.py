@@ -335,23 +335,6 @@ def train(conf, _model):
                         calibrated_correctness = accuracy_score(calibrated_label, dev_batches["label"][batch_index])
                         average_calibrate_rate += calibrated_rate
                         average_calibrated_correctness += calibrated_correctness
-                        if conf['calibration_loss_type'] == 'hinge':
-                            out_label = [str(int(l)) for l in c_y_pred]
-                        elif conf['calibration_loss_type'] == 'cross_entropy':
-                            out_label = ['1' if scores[1] > scores[0] else '0' for scores in m_y_pred]
-                        #print(origin_label)
-                        #print(calibrated_label)
-                        #print(calibrated_rate)
-                        #print(calibrated_rate)
-                        #print(average_calibrate_rate)
-                        #print(calibrated_correctness)
-                        #print(average_calibrated_correctness)
-                        #print('-'*30)
-                        #print(list(m_y_pred[:, -1]))
-                        #print(out_label)
-                        #print(dev_batches["label"][batch_index])
-                        #print(accuracy_score(out_label, dev_batches["label"][batch_index]))
-                        #print('-'*30)
                         m_label_list.extend(dev_batches["label"][batch_index])
                         m_y_pred_list.extend(list(m_y_pred[:, -1]))
 
