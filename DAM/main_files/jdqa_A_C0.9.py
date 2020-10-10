@@ -19,7 +19,7 @@ import bin.test_and_evaluate as test
 conf = {
     "data_path": "./data/jdqa/data.pkl",
     "word_emb_init": "./data/jdqa/word_embedding.pkl",
-    "save_path": "./output/jdqa_A_B200/",
+    "save_path": "./output/jdqa_A_C09/",
     "init_model": None, #should be set for test
 
     "rand_seed": None, 
@@ -55,8 +55,8 @@ conf = {
 
     "calibration_max_step": 1000000000000,
     "matching_max_step": 1000000000000,
-    "validation_step": 200, #correspond to n
-    "validation_update_batch_percentage": 1.0, #correspond to m
+    "validation_step": 1, #correspond to n
+    "validation_update_batch_percentage": 0.9, #correspond to m
 
     "decay_steps": 1000,
     "decay_rate": 1.0,
