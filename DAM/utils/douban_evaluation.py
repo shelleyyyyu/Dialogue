@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-from sklearn.metrics import average_precision_score
+from sklearn.metrics import average_precision_score, roc_auc_score, accuracy_score
 
 def mean_average_precision(sort_data):
     #to do
