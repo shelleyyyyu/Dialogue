@@ -293,7 +293,7 @@ class Net(object):
             # loss and train
             with tf.variable_scope('loss'):
                 # pass to linear transformation and softmax to get the logits and softmax-ed value y_pred
-                self.c_loss, self.c_logits, self.c_y_pred = layers.calibration_loss(c_final_info, self._label)
+                self.c_loss, self.c_logits, self.c_y_pred = layers.calibration_loss(c_final_info, self._label, loss_type=self._conf['calibration_loss_type'])
                 self.c_correct = tf.equal(tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.int32), tf.to_int32(self._label))
                 self.c_accuracy = tf.reduce_mean(tf.cast(self.c_correct, 'float'))
 
@@ -316,7 +316,7 @@ class Net(object):
                             default=f_pretrain_matching, exclusive=False)
 
 
-                self.m_loss, self.m_logits, self.m_y_pred = layers.loss(m_final_info, target_label)
+                self.m_loss, self.m_logits, self.m_y_pred = layers.matching_loss(m_final_info, target_label, loss_type=self._conf['matching_loss_type'])
                 self.m_correct = tf.equal(tf.cast(tf.argmax(self.m_y_pred, axis=1), tf.int32), tf.to_int32(target_label))
                 self.m_accuracy = tf.reduce_mean(tf.cast(self.m_correct, 'float'))
                 self.total_loss = self.m_loss+self.c_loss

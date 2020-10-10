@@ -1,6 +1,7 @@
 import sys
 import os
 import time
+import random
 
 import cPickle as pickle
 import tensorflow as tf
@@ -267,7 +268,15 @@ def train(conf, _model):
                     shuffle_validation_data = reader.unison_shuffle(validation_data)
                     validation_batches = reader.build_batches(shuffle_validation_data, conf)
                     validation_batch_num = len(validation_batches["response"])
-                    for validation_batch_index in xrange(validation_batch_num):
+                    if conf['validation_update_batch_percentage'] != 1.0:
+                        sample_num = int(validation_batch_num * conf['validation_update_batch_percentage'])
+                        scalar = [i for i in range(validation_batch_num)]
+                        sample_batch_number = random.sample(scalar, sample_num)
+                    else:
+                        scalar = [i for i in range(validation_batch_num)]
+                        sample_batch_number = scalar
+                    for validation_batch_index in sample_batch_number:
+                    #for validation_batch_index in xrange(validation_batch_num):
                         _feed = {
                             _model.is_pretrain_calibration: False,
                             _model.is_pretrain_matching: False,
@@ -317,13 +326,19 @@ def train(conf, _model):
                         }
 
                         c_y_pred, m_y_pred = _sess.run([_model.c_y_pred, _model.m_y_pred], feed_dict=_feed)
-                        calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_y_pred]
+                        if conf['calibration_loss_type'] == 'hinge':
+                            calibrated_label = [str(int(l)) for l in c_y_pred]
+                        elif conf['calibration_loss_type'] == 'cross_entropy':
+                            calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_y_pred]
                         origin_label = ['1', '0'] * int(len(calibrated_label) / 2)
                         calibrated_rate = 1 - accuracy_score(calibrated_label, origin_label)
                         calibrated_correctness = accuracy_score(calibrated_label, dev_batches["label"][batch_index])
                         average_calibrate_rate += calibrated_rate
                         average_calibrated_correctness += calibrated_correctness
-                        out_label = ['1' if scores[1] > scores[0] else '0' for scores in m_y_pred]
+                        if conf['calibration_loss_type'] == 'hinge':
+                            out_label = [str(int(l)) for l in c_y_pred]
+                        elif conf['calibration_loss_type'] == 'cross_entropy':
+                            out_label = ['1' if scores[1] > scores[0] else '0' for scores in m_y_pred]
                         #print(origin_label)
                         #print(calibrated_label)
                         #print(calibrated_rate)

@@ -55,10 +55,16 @@ conf = {
 
     "calibration_max_step": 10000000000,
     "matching_max_step": 10000000000,
-    "validation_step": 10,
+    "validation_step": 10, #correspond to n
+    "validation_update_batch_percentage": 1.0, #correspond to m
 
     "decay_steps": 1000,
-    "decay_rate": 0.9
+    "decay_rate": 0.9,
+    #cross_entropy / hinge
+    "matching_loss_type": 'cross_entropy',
+    #"calibration_loss_type": 'hinge',
+    #"matching_loss_type": 'hinge',
+    "calibration_loss_type": 'cross_entropy'
 }
 
 joint_model = joint_net.Net(conf)

@@ -87,87 +87,72 @@ def loss_logits(x, y, num_classes=2, is_clip=True, clip_value=10):
 
     return loss, logits, y_pred
 
-def calibration_loss(x, y, num_classes=2, is_clip=True, clip_value=10):
-    '''From info x calculate logits as return loss.
-
-        Args:
-            x: a tensor with shape [batch, dimension]
-            num_classes: a number
-
-        Returns:
-            loss: a tensor with shape [1], which is the average loss of one batch
-            logits: a tensor with shape [batch, 1]
-
-        Raises:
-            AssertionError: if
-                num_classes is not a int greater equal than 2.
-        TODO:
-            num_classes > 2 may be not adapted.
-        '''
+def calibration_loss(x, y, num_classes=2, is_clip=True, clip_value=10, loss_type= 'cross_entropy'):
     assert isinstance(num_classes, int)
     assert num_classes >= 2
 
-    W = tf.get_variable(
-        name='c_weights',
-        shape=[x.shape[-1], num_classes],
-        initializer=tf.orthogonal_initializer())
-    bias = tf.get_variable(
-        name='c_bias',
-        shape=[num_classes],
-        initializer=tf.zeros_initializer())
-    logits = tf.matmul(x, W) + bias
-    # print(logits.shape)
-    # print('-'*100)
-    # loss = tf.nn.sigmoid_cross_entropy_with_logits(
-    #    labels=tf.cast(y, tf.float32),
-    #    logits=logits)
-    # loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
-
-    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(y, tf.int32), logits=logits)
-    loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
-    y_pred = tf.nn.softmax(logits)
+    if loss_type == 'cross_entropy':
+        W = tf.get_variable(
+            name='c_weights',
+            shape=[x.shape[-1], num_classes],
+            initializer=tf.orthogonal_initializer())
+        bias = tf.get_variable(
+            name='c_bias',
+            shape=[num_classes],
+            initializer=tf.zeros_initializer())
+        logits = tf.matmul(x, W) + bias
+        y_pred = tf.nn.softmax(logits)
+        loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(y, tf.int32), logits=logits)
+        loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
+    elif loss_type == 'hinge':
+        W = tf.get_variable(
+            name='c_weights',
+            shape=[x.shape[-1], num_classes-1],
+            initializer=tf.orthogonal_initializer())
+        bias = tf.get_variable(
+            name='c_bias',
+            shape=[num_classes-1],
+            initializer=tf.zeros_initializer())
+        logits = tf.matmul(x, W) + bias
+        y_pred = tf.nn.softmax(logits)
+        #print(tf.transpose(logits)[0].shape)
+        #print(tf.cast(y, tf.int32).shape)
+        loss = tf.losses.hinge_loss(labels=tf.cast(y, tf.int32), logits=tf.transpose(logits)[0])
+        loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
 
     return loss, logits, y_pred
 
-def loss(x, y, num_classes=2, is_clip=True, clip_value=10):
-    '''From info x calculate logits as return loss.
-
-    Args:
-        x: a tensor with shape [batch, dimension]
-        num_classes: a number
-
-    Returns:
-        loss: a tensor with shape [1], which is the average loss of one batch
-        logits: a tensor with shape [batch, 1]
-
-    Raises:
-        AssertionError: if
-            num_classes is not a int greater equal than 2.
-    TODO:
-        num_classes > 2 may be not adapted.
-    '''
+def matching_loss(x, y, num_classes=2, is_clip=True, clip_value=10, loss_type= 'cross_entropy'):
+    # loss type: cross_entropy or hinge loss
     assert isinstance(num_classes, int)
     assert num_classes >= 2
 
-    W = tf.get_variable(
-        name='m_weights',
-        shape=[x.shape[-1], num_classes],
-        initializer=tf.orthogonal_initializer())
-    bias = tf.get_variable(
-        name='m_bias',
-        shape=[num_classes],
-        initializer=tf.zeros_initializer())
-    logits = tf.matmul(x, W) + bias
-    #print(logits.shape)
-    #print('-'*100)
-    #loss = tf.nn.sigmoid_cross_entropy_with_logits(
-    #    labels=tf.cast(y, tf.float32),
-    #    logits=logits)
-    #loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
-
-    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(y, tf.int32), logits=logits)
-    loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
-    y_pred = tf.nn.softmax(logits)
+    if loss_type == 'cross_entropy':
+        W = tf.get_variable(
+            name='m_weights',
+            shape=[x.shape[-1], num_classes],
+            initializer=tf.orthogonal_initializer())
+        bias = tf.get_variable(
+            name='m_bias',
+            shape=[num_classes],
+            initializer=tf.zeros_initializer())
+        logits = tf.matmul(x, W) + bias
+        y_pred = tf.nn.softmax(logits)
+        loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(y, tf.int32), logits=logits)
+        loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
+    elif loss_type == 'hinge':
+        W = tf.get_variable(
+            name='m_weights',
+            shape=[x.shape[-1], num_classes - 1],
+            initializer=tf.orthogonal_initializer())
+        bias = tf.get_variable(
+            name='m_bias',
+            shape=[num_classes - 1],
+            initializer=tf.zeros_initializer())
+        logits = tf.matmul(x, W) + bias
+        y_pred = tf.nn.softmax(logits)
+        loss = tf.losses.hinge_loss(labels=tf.cast(y, tf.int32), logits=tf.transpose(logits)[0])
+        loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
 
     return loss, logits, y_pred
 
