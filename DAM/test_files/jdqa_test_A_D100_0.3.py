@@ -22,7 +22,7 @@ conf = {
     "save_path": "./output/jdqa_A_D100_03/",
     "init_model": "./output/jdqa_A_D100_03/joint_learning_model.ckpt.1", #should be set for test
 
-    "rand_seed": None, 
+    "rand_seed": None, c
 
     "drop_dense": None,
     "drop_attention": None,
