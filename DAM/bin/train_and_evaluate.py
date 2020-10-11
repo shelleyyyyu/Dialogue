@@ -259,9 +259,9 @@ def train(conf, _model):
                     _model._label: train_batches["label"][batch_index]
                 }
 
-                m_loss, g_updates = _sess.run([_model.m_loss, _model.g_updates], feed_dict=_feed)
+                total_loss, g_updates = _sess.run([_model.total_loss, _model.g_updates], feed_dict=_feed)
 
-                m_m_loss += m_loss
+                m_m_loss += total_loss
 
                 # -------------------- Calibration Model Optimisation ------------------- #
                 if step % conf['validation_step'] == 0:
