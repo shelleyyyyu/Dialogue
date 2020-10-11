@@ -180,7 +180,7 @@ class Net(object):
             print('sim shape: %s' % c_sim.shape)
             with tf.variable_scope('c_cnn_aggregation'):
                 # for douban
-                c_final_info = layers.CNN_3d(c_sim, 32, 16)
+                c_final_info = layers.CNN_3d(c_sim, 16, 16)
 
             # ========== Matching Network ==========
 
@@ -288,7 +288,7 @@ class Net(object):
             print('sim shape: %s' % m_sim.shape)
             with tf.variable_scope('m_cnn_aggregation'):
                 # for douban
-                m_final_info = layers.CNN_3d(m_sim, 32, 16)
+                m_final_info = layers.CNN_3d(m_sim, 16, 16)
 
             # loss and train
             with tf.variable_scope('loss'):
