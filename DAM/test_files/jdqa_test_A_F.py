@@ -20,7 +20,7 @@ conf = {
     "data_path": "./data/jdqa/data.pkl",
     "word_emb_init": "./data/jdqa/word_embedding.pkl",
     "save_path": "./output/jdqa_A_F/",
-    "init_model": "./output/jdqa_A_F/joint_learning_model.ckpt.1", #should be set for test
+    "init_model": "joint_learning_model.ckpt.1", #should be set for test
 
     "rand_seed": None, 
 
