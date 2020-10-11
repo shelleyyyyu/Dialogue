@@ -20,7 +20,7 @@ conf = {
     "data_path": "./data/jdqa/data.pkl",
     "word_emb_init": "./data/jdqa/word_embedding.pkl",
     "save_path": "./output/jdqa_A_D100_05/",
-    "init_model": "joint_learning_model.ckpt.1", #should be set for test
+    "init_model": "./output/jdqa_A_D100_05/joint_learning_model.ckpt.1", #should be set for test
 
     "rand_seed": None, 
 
@@ -68,4 +68,4 @@ conf = {
 }
 
 joint_model = joint_net.Net(conf)
-train.train(conf, joint_model)
+test.test(conf, joint_model, type='test')
