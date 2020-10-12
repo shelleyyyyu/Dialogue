@@ -72,12 +72,12 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
                         _model._label: dev_batches["label"][batch_index]
                     }
 
-                    c_accuracy, _, _y_pred = _sess.run([_model.c_accuracy, _model.c_logits, _model.c_y_pred], feed_dict=_feed)
-                    avg_acc += c_accuracy
+                    _, _y_pred = _sess.run([_model.c_logits, _model.c_y_pred], feed_dict=_feed)
+                    #avg_acc += c_accuracy
                     label_list.extend(dev_batches["label"][batch_index])
                     _y_pred_list.extend(list(_y_pred[:, -1]))
                 # write evaluation result
-                avg_acc = avg_acc / dev_batch_num
+                #avg_acc = avg_acc / dev_batch_num
                 result = eva.evaluate_auc(_y_pred_list, label_list)
                 print('[Pretrain Calibration] Epoch %d - AUC: %.3f' % (epoch, result))
                 if result > best_result:
@@ -122,7 +122,10 @@ def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
                 _model._label: train_batches["label"][batch_index]
             }
 
-            _, _curr_loss = _sess.run([_model.g_updates, _model.m_loss], feed_dict=_feed)
+            _, _curr_loss = _sess.run([ _model.g_updates, _model.m_loss], feed_dict=_feed)
+
+            #print(refine_label)
+            #print(_label)
             average_loss += _curr_loss
 
             step += 1
@@ -152,13 +155,11 @@ def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
                         _model._label: dev_batches["label"][batch_index]
                     }
 
-                    accuracy_score, _, _y_pred = _sess.run([_model.m_accuracy, _model.m_logits, _model.m_y_pred], feed_dict=_feed)
+                    _, _y_pred = _sess.run([_model.m_logits, _model.m_y_pred], feed_dict=_feed)
                     label_list.extend(dev_batches["label"][batch_index])
                     _y_pred_list.extend(list(_y_pred[:,-1]))
-                    avg_accuracy += accuracy_score
                 # write evaluation result
                 result = eva.evaluate_auc(_y_pred_list, label_list)
-                avg_accuracy = avg_accuracy / dev_batch_num
                 print('[Pretrain Matching] Epoch %d - AUC: %.3f' % (epoch, result))
                 if result > best_result:
                     best_result = result
@@ -171,18 +172,29 @@ def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
     return _pretrain_update_model_save_name
 
 def train(conf, _model):
-    
+    final_model_save_name = None
     if conf['rand_seed'] is not None:
         np.random.seed(conf['rand_seed'])
 
     if not os.path.exists(conf['save_path']):
         os.makedirs(conf['save_path'])
 
+    # load vocab
+    id_to_word = {}
+    word_to_id = {}
+    with open(conf['word_to_id'], 'r') as files:
+        word2id = files.readlines()
+        for line in word2id:
+            id_to_word[line.strip().split('\t')[1]] = line.strip().split('\t')[0]
+            word_to_id[line.strip().split('\t')[0]] = line.strip().split('\t')[1]
+
     # load data
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - start loading data')
     train_data, test_data, validation_data = pickle.load(open(conf["data_path"], 'rb'))
     dev_batches = reader.build_batches(validation_data, conf)
+    test_batches = reader.build_batches(test_data, conf)
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - Finish Data Pre-processing')
+
     #Print configuration setting
     print('configurations: %s' %conf)
 
@@ -227,16 +239,18 @@ def train(conf, _model):
         # refine conf
         batch_num = int(len(train_data['y']) / conf["batch_size"])
         dev_batch_num = len(dev_batches["response"])
+        test_batch_num = len(test_batches["response"])
 
         conf["train_steps"] = conf["num_scan_data"] * batch_num
         conf["save_step"] = int(max(1, batch_num / 10))
         conf["print_step"] = int(max(1, batch_num / 100))
 
         # Indicators
-        m_m_loss, c_m_loss = 0.0, 0.0
+        matching_loss, calibration_loss = 0.0, 0.0
         step, best_result = 0, 0.0
         #c_summaries, m_summaries = None, None
         for epoch in xrange(conf["num_scan_data"]):
+            data_calibration_log = []
             print('starting shuffle train data')
             shuffle_train = reader.unison_shuffle(train_data)
             train_batches = reader.build_batches(shuffle_train, conf)
@@ -259,9 +273,18 @@ def train(conf, _model):
                     _model._label: train_batches["label"][batch_index]
                 }
 
-                total_loss, g_updates = _sess.run([_model.total_loss, _model.g_updates], feed_dict=_feed)
-
-                m_m_loss += total_loss
+                #m_loss, g_updates = _sess.run([_model.m_loss, _model.g_updates], feed_dict=_feed)
+                c_y_pred, refine_label, m_loss, g_updates = _sess.run([_model.c_y_pred, _model.refine_label, _model.m_loss, _model.g_updates], feed_dict=_feed)
+                for j in range(conf['batch_size']):
+                    q = ' '.join([id_to_word[i]for i in train_batches["turns"][batch_index][j][0] if i != 0 and i != 1 and i in word2id])
+                    r = ' '.join([id_to_word[i]for i in list(train_batches["response"][batch_index][j]) if i != 0 and i != 1 and i in word2id])
+                    o_l = train_batches["label"][batch_index][j]
+                    r_l = list(refine_label)[j]
+                    label_1_prob = '%.3f'%(c_y_pred[j][-1])
+                    #isSame = str(o_l == r_l)
+                    #data_calibration_log.append('\t'.join([q, r, o_l, r_l, label_1_prob, isSame]))
+                    data_calibration_log.append([q, r, o_l, r_l, label_1_prob])
+                matching_loss += m_loss
 
                 # -------------------- Calibration Model Optimisation ------------------- #
                 if step % conf['validation_step'] == 0:
@@ -293,7 +316,7 @@ def train(conf, _model):
 
                         c_loss, g_updates = _sess.run([_model.c_loss, _model.g_updates], feed_dict=_feed)
 
-                        c_m_loss += c_loss
+                        calibration_loss += c_loss
 
                 step += 1
 
@@ -301,51 +324,56 @@ def train(conf, _model):
                     g_step, lr = _sess.run([_model.global_step, _model.learning_rate])
                     print("processed: [%.4f]" % (float(step * 1.0 / batch_num)))
                     print("[Joint Model] - step: %d , lr: %f , m_loss: [%.6f], c_loss: [%.6f]" %(
-                            g_step, lr, (m_m_loss / conf["print_step"]), (c_m_loss / conf["print_step"])))
-                    m_m_loss, c_m_loss = 0.0, 0.0
+                            g_step, lr, (matching_loss / conf["print_step"]), (calibration_loss / conf["print_step"])))
+                    matching_loss, calibration_loss = 0.0, 0.0
 
                 if step % conf["save_step"] == 0 and step > 0:
                     index = step / conf['save_step']
                     print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + ' - save step: %s' %index)
-                    average_calibrate_rate, average_calibrated_correctness = 0.0, 0.0
+                    #average_calibrate_rate, average_calibrated_correctness = 0.0, 0.0
                     m_label_list, c_label_list, m_y_pred_list, c_y_pred_list = [], [], [], []
-                    for batch_index in xrange(dev_batch_num):
+                    for batch_index in xrange(test_batch_num):
 
                         _feed = {
-                            _model.is_pretrain_calibration: True,
-                            _model.is_pretrain_matching: True,
+                            _model.is_pretrain_calibration: False,
+                            _model.is_pretrain_matching: False,
                             _model.is_backprop_calibration: False,
                             _model.is_backprop_matching: False,
                             _model.calibration_type: conf['calibration_type'],
-                            _model._turns: dev_batches["turns"][batch_index],
-                            _model._tt_turns_len: dev_batches["tt_turns_len"][batch_index],
-                            _model._every_turn_len: dev_batches["every_turn_len"][batch_index],
-                            _model._response: dev_batches["response"][batch_index],
-                            _model._response_len: dev_batches["response_len"][batch_index],
-                            _model._label: dev_batches["label"][batch_index]
+                            _model._turns: test_batches["turns"][batch_index],
+                            _model._tt_turns_len: test_batches["tt_turns_len"][batch_index],
+                            _model._every_turn_len: test_batches["every_turn_len"][batch_index],
+                            _model._response: test_batches["response"][batch_index],
+                            _model._response_len: test_batches["response_len"][batch_index],
+                            _model._label: test_batches["label"][batch_index]
                         }
 
-                        c_y_pred, m_y_pred = _sess.run([_model.c_y_pred, _model.m_y_pred], feed_dict=_feed)
-                        if conf['calibration_loss_type'] == 'hinge':
-                            calibrated_label = [str(int(l)) for l in c_y_pred]
-                        elif conf['calibration_loss_type'] == 'cross_entropy':
-                            calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_y_pred]
-                        origin_label = ['1', '0'] * int(len(calibrated_label) / 2)
-                        calibrated_rate = 1 - accuracy_score(calibrated_label, origin_label)
-                        calibrated_correctness = accuracy_score(calibrated_label, dev_batches["label"][batch_index])
-                        average_calibrate_rate += calibrated_rate
-                        average_calibrated_correctness += calibrated_correctness
+                        _, m_y_pred = _sess.run([_model.m_logits, _model.m_y_pred], feed_dict=_feed)
+                        #if conf['calibration_loss_type'] == 'hinge':
+                        #    calibrated_label = [str(int(l)) for l in c_y_pred]
+                        #elif conf['calibration_loss_type'] == 'cross_entropy':
+                        #    calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_y_pred]
+                        #origin_label = ['1', '0'] * int(len(calibrated_label) / 2)
+                        #calibrated_rate = 1 - accuracy_score(calibrated_label, origin_label)
+                        #calibrated_correctness = accuracy_score(calibrated_label, dev_batches["label"][batch_index])
+                        #average_calibrate_rate += calibrated_rate
+                        #average_calibrated_correctness += calibrated_correctness
                         m_label_list.extend(dev_batches["label"][batch_index])
                         m_y_pred_list.extend(list(m_y_pred[:, -1]))
 
                     #print('Data Calibration Rate: %.4f' % (average_correction_rate/dev_batch_num))
                     result = eva.evaluate_auc(m_y_pred_list, m_label_list)
                     #loss_str = "%.6f" %(m_loss)
-                    print('Epoch %d - Calibrate rate: %.4f; correctness: %.4f, Matching Auc: %.4f' %(epoch, (average_calibrate_rate/dev_batch_num), (average_calibrated_correctness/dev_batch_num), result))
+                    #print('Epoch %d - Calibrate rate: %.4f; correctness: %.4f, Matching Auc: %.4f' %(epoch, (average_calibrate_rate/dev_batch_num), (average_calibrated_correctness/dev_batch_num), result))
+                    print('Epoch %d - Matching Auc: %.4f' %(epoch, result))
                     if result > best_result:
                         best_result = result
                         save_path = _model.saver.save(_sess, conf["save_path"] + "joint_learning_model.ckpt." + str(int((step / conf["save_step"]))))
                         print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + " - finish evaluation - success saving model in " + save_path)
-
-                
+                        final_model_save_name = save_path
+            fname = 'data.calibration.epoch.{}.txt'.format(epoch)
+            with open(os.path.join(conf['save_path'], fname), 'w') as o_f:
+                for log in data_calibration_log:
+                    o_f.write(log[0] + '\t' + log[1] + '\t' + str(log[2]) + '\t' + str(int(log[3])) + '\t' + log[4] +'\n')
+    return final_model_save_name
 

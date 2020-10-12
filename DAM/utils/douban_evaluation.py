@@ -78,7 +78,7 @@ def evaluate(file_path):
     eva_dict['P@1'] = 1.0*sum_p_1/total_num
     eva_dict['R10@1'] = 1.0*sum_r_1/total_num
     eva_dict['R10@2'] = 1.0*sum_r_2/total_num
-    #eva_dict['R10@5'] = 1.0*sum_r_5/total_num
+    eva_dict['R10@5'] = 1.0*sum_r_5/total_num
     return eva_dict
 
 def evaluate_auc_from_file(file_path):
@@ -88,12 +88,12 @@ def evaluate_auc_from_file(file_path):
 		for line in file:
 			line = line.strip()
 			tokens = line.split("\t")
-			c_prob_1_list.append(float(tokens[0]))
-			m_prob_1_list.append(float(tokens[1]))
-			c_pred_label_list.append(1 if tokens[0] > 0.5 else 0)
-			m_pred_label_list.append(1 if tokens[1] > 0.5 else 0)
-			truth_label_list.append(int(tokens[2]))
-    eva_dict['calibration_rate'] = 1- roc_auc_score(truth_label_list, c_pred_label_list)
+			#c_prob_1_list.append(float(tokens[0]))
+			m_prob_1_list.append(float(tokens[0]))
+			#c_pred_label_list.append(1 if tokens[0] > 0.5 else 0)
+			m_pred_label_list.append(1 if tokens[0] > 0.5 else 0)
+			truth_label_list.append(int(tokens[1]))
+    #eva_dict['calibration_rate'] = 1- roc_auc_score(truth_label_list, c_pred_label_list)
     eva_dict['final_auc'] = roc_auc_score(truth_label_list, m_prob_1_list)
     eva_dict['final_acc'] = accuracy_score(truth_label_list, m_pred_label_list)
     return eva_dict

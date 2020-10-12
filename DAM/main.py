@@ -19,6 +19,7 @@ import bin.test_and_evaluate as test
 conf = {
     "data_path": "./data/jdqa/data.pkl",
     "word_emb_init": './data/jdqa/word_embedding.pkl',
+    "word_to_id": "./data/jdqa/word2id",
     "save_path": "./output/jdqa/",
     "init_model": None, #should be set for test
 
@@ -64,8 +65,16 @@ conf = {
     "matching_loss_type": 'cross_entropy',
     #"calibration_loss_type": 'hinge',
     #"matching_loss_type": 'hinge',
-    "calibration_loss_type": 'cross_entropy'
+    "calibration_loss_type": 'cross_entropy',
+
+    "positive_sample_threshold": 0.9,
+    "negative_sample_threshold": 0.1
 }
 
 joint_model = joint_net.Net(conf)
-train.train(conf, joint_model)
+final_model_save_name = train.train(conf, joint_model)
+conf['init_model'] = final_model_save_name
+print('=' * 60 + '\n' + 'Start Testing' + '\n' + '=' * 60)
+print('Init model ckpt: %s'%final_model_save_name)
+joint_test_model = joint_net.Net(conf)
+test.test(conf, joint_test_model, type='test')

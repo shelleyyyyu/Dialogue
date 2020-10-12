@@ -257,7 +257,8 @@ class Net(object):
                 m_t_a_r = tf.stack(m_t_a_r_stack, axis=-1)
                 m_r_a_t = tf.stack(m_r_a_t_stack, axis=-1)
 
-                with tf.variable_scope('m_merge_rep'):
+                # 2 network representation fusion
+                '''with tf.variable_scope('m_merge_rep'):
 
                     def f1():
                         return m_t_a_r, m_t_a_r, m_r_a_t, m_r_a_t
@@ -273,7 +274,7 @@ class Net(object):
 
                     #Combine with the calibration infos
                     m_t_a_r = tf.reduce_mean(tf.concat([tf.expand_dims(tar1, 0), tf.expand_dims(tar2, 0)], axis=0), axis=0)
-                    m_r_a_t = tf.reduce_mean(tf.concat([tf.expand_dims(rat1, 0), tf.expand_dims(rat2, 0)], axis=0), axis=0)
+                    m_r_a_t = tf.reduce_mean(tf.concat([tf.expand_dims(rat1, 0), tf.expand_dims(rat2, 0)], axis=0), axis=0)'''
 
                 # calculate similarity matrix
                 with tf.variable_scope('m_similarity'):
@@ -282,7 +283,6 @@ class Net(object):
                     m_sim = tf.einsum('biks,bjks->bijs', m_t_a_r, m_r_a_t) #/ tf.sqrt(200.0)
 
                 m_sim_turns.append(m_sim)
-
             # cnn and aggregation
             m_sim = tf.stack(m_sim_turns, axis=1)
             print('sim shape: %s' % m_sim.shape)
@@ -294,32 +294,50 @@ class Net(object):
             with tf.variable_scope('loss'):
                 # pass to linear transformation and softmax to get the logits and softmax-ed value y_pred
                 self.c_loss, self.c_logits, self.c_y_pred = layers.calibration_loss(c_final_info, self._label, loss_type=self._conf['calibration_loss_type'])
-                self.c_correct = tf.equal(tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.int32), tf.to_int32(self._label))
-                self.c_accuracy = tf.reduce_mean(tf.cast(self.c_correct, 'float'))
+                #self.c_correct = tf.equal(tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.int32), tf.to_int32(self._label))
+                #self.c_accuracy = tf.reduce_mean(tf.cast(self.c_correct, 'float'))
 
                 # Use the c_y_pred abd define the calibrated label for the matching model (classifier)
-                c_label = tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.float32)
+                def calibrate_label(c_y_pred, true_labels):
+                    target_label = []
+                    for i in range(c_y_pred.shape[0]):
+                        true = true_labels[i]
+
+                        def fn1():
+                            return tf.cond(tf.greater(c_y_pred[i, -1], tf.cast(self._conf['positive_sample_threshold'], tf.float32)), lambda:tf.cast(tf.constant(1), tf.float32), lambda: tf.cast(tf.constant(0), tf.float32))
+
+                        def fn2():
+                            return tf.cond(tf.greater(tf.cast(self._conf['negative_sample_threshold'], tf.float32), c_y_pred[i, -1]), lambda:tf.cast(tf.constant(0), tf.float32), lambda: tf.cast(tf.constant(1), tf.float32))
+
+
+                        refine_label = tf.cond(tf.equal(true, tf.cast(tf.constant(0), tf.float32)), fn1, fn2)
+                        target_label.append(refine_label)
+                    return target_label
 
                 def f_pretrain_matching():
-                    return self._label, tf.constant(-1)
+                    #print(self._label)
+                    return self._label#, tf.constant(-1)
                 def f_calibration_type_0():
-                    return c_label, tf.constant(0)
-                def f_calibration_type_1():
-                    return self.c_y_pred[:, -1], tf.constant(1)
-                def f_calibration_type_2():
-                    return self.c_logits[:, -1], tf.constant(2)
+                    target_label = calibrate_label(self.c_y_pred, self._label)
+                    stacked_target_label = tf.stack(target_label)
+                    #print(stacked_target_label)
+                    return stacked_target_label#, tf.constant(0)
+                #def f_calibration_type_1():
+                #    return self.c_y_pred[:, -1], tf.constant(1)
+                #def f_calibration_type_2():
+                #    return self.c_logits[:, -1], tf.constant(2)
 
-                target_label, self.shelly_test = tf.case({tf.equal(self.is_pretrain_matching, tf.constant(True)): f_pretrain_matching,
-                                        tf.equal(self.calibration_type, tf.constant(0)): f_calibration_type_0,
-                                        tf.equal(self.calibration_type, tf.constant(1)): f_calibration_type_1,
-                                        tf.equal(self.calibration_type, tf.constant(2)): f_calibration_type_2},
-                            default=f_pretrain_matching, exclusive=False)
+                #target_label, self.shelly_test = tf.case({tf.equal(self.is_pretrain_matching, tf.constant(True)): f_pretrain_matching,
+                #                        tf.equal(self.calibration_type, tf.constant(0)): f_calibration_type_0,
+                #                        tf.equal(self.calibration_type, tf.constant(1)): f_calibration_type_1,
+                #                        tf.equal(self.calibration_type, tf.constant(2)): f_calibration_type_2},
+                #            default=f_pretrain_matching, exclusive=False)
 
-
-                self.m_loss, self.m_logits, self.m_y_pred = layers.matching_loss(m_final_info, target_label, loss_type=self._conf['matching_loss_type'])
-                self.m_correct = tf.equal(tf.cast(tf.argmax(self.m_y_pred, axis=1), tf.int32), tf.to_int32(target_label))
-                self.m_accuracy = tf.reduce_mean(tf.cast(self.m_correct, 'float'))
-                self.total_loss = self.m_loss+self.c_loss
+                self.refine_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), f_pretrain_matching, f_calibration_type_0)
+                self.m_loss, self.m_logits, self.m_y_pred = layers.matching_loss(m_final_info, self.refine_label, loss_type=self._conf['matching_loss_type'])
+                #self.m_correct = tf.equal(tf.cast(tf.argmax(self.m_y_pred, axis=1), tf.int32), tf.to_int32(self.refine_label))
+                #self.m_accuracy = tf.reduce_mean(tf.cast(self.m_correct, 'float'))
+                #self.total_loss = self.m_loss+self.c_loss
 
                 # Start update the network variable
                 self.saver = tf.train.Saver(max_to_keep=self._conf["max_to_keep"])
@@ -374,11 +392,11 @@ class Net(object):
                         global_step=self.global_step)
                     return g_updates, tf.constant(333)
                 def c_m_loss_fn2():
-                    self.optimizer = Optimizer.minimize(self.total_loss, global_step=self.global_step)
-                    grads_and_vars = Optimizer.compute_gradients(self.total_loss)
+                    self.optimizer = Optimizer.minimize(self.m_loss, global_step=self.global_step)
+                    grads_and_vars = Optimizer.compute_gradients(self.m_loss)
                     target_grads_and_vars = []
                     for grad, var in grads_and_vars:
-                        if grad is not None: #and ('m_' in var.name):
+                        if grad is not None and ('m_' in var.name):
                             target_grads_and_vars.append((grad, var))
                     print(len(target_grads_and_vars))
                     capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in target_grads_and_vars]
