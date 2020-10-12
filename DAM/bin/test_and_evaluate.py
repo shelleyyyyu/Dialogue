@@ -69,11 +69,10 @@ def test(conf, _model, type='test'):
             #    calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_y_pred]
             #calibrated_rate = 1 - accuracy_score(calibrated_label, test_batches["label"][batch_index])
             #average_calibrate_rate += calibrated_rate
-
             for i in xrange(conf["batch_size"]):
                 score_file.write(
                     #str(c_y_pred[i][-1]) + '\t' +
-                    str(m_y_pred[i][-1]) + '\t' +
+                    str(m_y_pred[0][i][-1]) + '\t' +
                     str(test_batches["label"][batch_index][i]) + '\n')
         
         #print('Data Calibration Rate: %.4f' % (average_calibrate_rate/test_batch_num))
