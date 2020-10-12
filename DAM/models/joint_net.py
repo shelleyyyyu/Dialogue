@@ -41,14 +41,14 @@ class Net(object):
             else:
                 word_embedding_initializer = tf.random_normal_initializer(stddev=0.1)
 
-            self.c_word_embedding = tf.get_variable(
+            '''self.c_word_embedding = tf.get_variable(
                 name='c_word_embedding',
                 shape=[self._conf['vocab_size'] + 1, self._conf['emb_size']],
                 dtype=tf.float32,
-                initializer=word_embedding_initializer)
+                initializer=word_embedding_initializer)'''
 
-            self.m_word_embedding = tf.get_variable(
-                name='m_word_embedding',
+            self._word_embedding = tf.get_variable(
+                name='word_embedding',
                 shape=[self._conf['vocab_size'] + 1, self._conf['emb_size']],
                 dtype=tf.float32,
                 initializer=word_embedding_initializer)
@@ -78,20 +78,20 @@ class Net(object):
                 tf.float32,
                 shape=[self._conf["batch_size"]])
 
-            self.calibration_type = tf.placeholder(
-                tf.int32,
-                shape=[])
+            #self.calibration_type = tf.placeholder(
+            #    tf.int32,
+            #    shape=[])
 
-            self.is_pretrain_calibration = tf.placeholder(tf.bool)
+            #self.is_pretrain_calibration = tf.placeholder(tf.bool)
 
-            self.is_pretrain_matching = tf.placeholder(tf.bool)
+            #self.is_pretrain_matching = tf.placeholder(tf.bool)
 
-            self.is_backprop_calibration= tf.placeholder(tf.bool)
+            #self.is_backprop_calibration= tf.placeholder(tf.bool)
 
-            self.is_backprop_matching= tf.placeholder(tf.bool)
+            #self.is_backprop_matching= tf.placeholder(tf.bool)
 
 
-            # ========== Calibration Network ==========
+            '''# ========== Calibration Network ==========
 
             # define operations
             # response part
@@ -180,13 +180,13 @@ class Net(object):
             print('sim shape: %s' % c_sim.shape)
             with tf.variable_scope('c_cnn_aggregation'):
                 # for douban
-                c_final_info = layers.CNN_3d(c_sim, 16, 16)
+                c_final_info = layers.CNN_3d(c_sim, 32, 16)'''
 
             # ========== Matching Network ==========
 
             # define operations
             # response part
-            m_Hr = tf.nn.embedding_lookup(self.m_word_embedding, self._response)
+            m_Hr = tf.nn.embedding_lookup(self._word_embedding, self._response)
 
             if self._conf['is_positional'] and self._conf['stack_num'] > 0:
                 with tf.variable_scope('m_positional'):
@@ -208,7 +208,7 @@ class Net(object):
             m_sim_turns = []
             # for every turn_t calculate matching vector
             for m_turn_t, m_t_turn_length in zip(m_list_turn_t, m_list_turn_length):
-                m_Hu = tf.nn.embedding_lookup(self.m_word_embedding, m_turn_t)  # [batch, max_turn_len, emb_size]
+                m_Hu = tf.nn.embedding_lookup(self._word_embedding, m_turn_t)  # [batch, max_turn_len, emb_size]
 
                 if self._conf['is_positional'] and self._conf['stack_num'] > 0:
                     with tf.variable_scope('m_positional', reuse=True):
@@ -257,7 +257,7 @@ class Net(object):
                 m_t_a_r = tf.stack(m_t_a_r_stack, axis=-1)
                 m_r_a_t = tf.stack(m_r_a_t_stack, axis=-1)
 
-                with tf.variable_scope('m_merge_rep'):
+                '''with tf.variable_scope('m_merge_rep'):
 
                     def f1():
                         return m_t_a_r, m_t_a_r, m_r_a_t, m_r_a_t
@@ -273,7 +273,7 @@ class Net(object):
 
                     #Combine with the calibration infos
                     m_t_a_r = tf.reduce_mean(tf.concat([tf.expand_dims(tar1, 0), tf.expand_dims(tar2, 0)], axis=0), axis=0)
-                    m_r_a_t = tf.reduce_mean(tf.concat([tf.expand_dims(rat1, 0), tf.expand_dims(rat2, 0)], axis=0), axis=0)
+                    m_r_a_t = tf.reduce_mean(tf.concat([tf.expand_dims(rat1, 0), tf.expand_dims(rat2, 0)], axis=0), axis=0)'''
 
                 # calculate similarity matrix
                 with tf.variable_scope('m_similarity'):
@@ -288,19 +288,19 @@ class Net(object):
             print('sim shape: %s' % m_sim.shape)
             with tf.variable_scope('m_cnn_aggregation'):
                 # for douban
-                m_final_info = layers.CNN_3d(m_sim, 16, 16)
+                m_final_info = layers.CNN_3d(m_sim, 32, 16)
 
             # loss and train
             with tf.variable_scope('loss'):
                 # pass to linear transformation and softmax to get the logits and softmax-ed value y_pred
-                self.c_loss, self.c_logits, self.c_y_pred = layers.calibration_loss(c_final_info, self._label, loss_type=self._conf['calibration_loss_type'])
-                self.c_correct = tf.equal(tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.int32), tf.to_int32(self._label))
-                self.c_accuracy = tf.reduce_mean(tf.cast(self.c_correct, 'float'))
+                #self.c_loss, self.c_logits, self.c_y_pred = layers.calibration_loss(c_final_info, self._label, loss_type=self._conf['calibration_loss_type'])
+                #self.c_correct = tf.equal(tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.int32), tf.to_int32(self._label))
+                #self.c_accuracy = tf.reduce_mean(tf.cast(self.c_correct, 'float'))
 
                 # Use the c_y_pred abd define the calibrated label for the matching model (classifier)
-                c_label = tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.float32)
+                #c_label = tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.float32)
 
-                def f_pretrain_matching():
+                '''def f_pretrain_matching():
                     return self._label, tf.constant(-1)
                 def f_calibration_type_0():
                     return c_label, tf.constant(0)
@@ -313,13 +313,13 @@ class Net(object):
                                         tf.equal(self.calibration_type, tf.constant(0)): f_calibration_type_0,
                                         tf.equal(self.calibration_type, tf.constant(1)): f_calibration_type_1,
                                         tf.equal(self.calibration_type, tf.constant(2)): f_calibration_type_2},
-                            default=f_pretrain_matching, exclusive=False)
+                            default=f_pretrain_matching, exclusive=False)'''
 
 
-                self.m_loss, self.m_logits, self.m_y_pred = layers.matching_loss(m_final_info, target_label, loss_type=self._conf['matching_loss_type'])
-                self.m_correct = tf.equal(tf.cast(tf.argmax(self.m_y_pred, axis=1), tf.int32), tf.to_int32(target_label))
+                self.m_loss, self.m_logits, self.m_y_pred = layers.matching_loss(m_final_info, self._label, loss_type=self._conf['matching_loss_type'])
+                self.m_correct = tf.equal(tf.cast(tf.argmax(self.m_y_pred, axis=1), tf.int32), tf.to_int32(self._label))
                 self.m_accuracy = tf.reduce_mean(tf.cast(self.m_correct, 'float'))
-                self.total_loss = self.m_loss+self.c_loss
+                self.total_loss = self.m_loss#+self.c_loss
 
                 # Start update the network variable
                 self.saver = tf.train.Saver(max_to_keep=self._conf["max_to_keep"])
@@ -334,7 +334,7 @@ class Net(object):
 
                 Optimizer = tf.train.AdamOptimizer(self.learning_rate)
 
-                def c_loss_fn():
+                '''def c_loss_fn():
                     self.optimizer = Optimizer.minimize(self.c_loss, global_step=self.global_step)
                     grads_and_vars = Optimizer.compute_gradients(self.c_loss)
                     target_grads_and_vars = []
@@ -385,13 +385,25 @@ class Net(object):
                     g_updates = Optimizer.apply_gradients(
                         capped_gvs,
                         global_step=self.global_step)
-                    return g_updates, tf.constant(444)
+                    return g_updates, tf.constant(444)'''
 
-                self.g_updates, test = tf.case({tf.equal(self.is_pretrain_calibration, tf.constant(True)): c_loss_fn,
-                     tf.equal(self.is_pretrain_matching, tf.constant(True)): m_loss_fn,
-                     tf.equal(self.is_backprop_calibration, tf.constant(True)): c_m_loss_fn,
-                     tf.equal(self.is_backprop_matching, tf.constant(True)): c_m_loss_fn2},
-                    default=c_m_loss_fn2, exclusive=False)
+                #self.g_updates, test = tf.case({tf.equal(self.is_pretrain_calibration, tf.constant(True)): c_loss_fn,
+                #     tf.equal(self.is_pretrain_matching, tf.constant(True)): m_loss_fn,
+                #     tf.equal(self.is_backprop_calibration, tf.constant(True)): c_m_loss_fn,
+                #     tf.equal(self.is_backprop_matching, tf.constant(True)): c_m_loss_fn2},
+                #    default=c_m_loss_fn2, exclusive=False)
+
+                self.optimizer = Optimizer.minimize(self.m_loss, global_step=self.global_step)
+                grads_and_vars = Optimizer.compute_gradients(self.m_loss)
+                target_grads_and_vars = []
+                for grad, var in grads_and_vars:
+                    if grad is not None:
+                        target_grads_and_vars.append((grad, var))
+                print(len(target_grads_and_vars))
+                capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in target_grads_and_vars]
+                self.g_updates = Optimizer.apply_gradients(
+                    capped_gvs,
+                    global_step=self.global_step)
 
 
         return self._graph
