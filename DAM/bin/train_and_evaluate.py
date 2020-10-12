@@ -182,6 +182,7 @@ def train(conf, _model):
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - start loading data')
     train_data, test_data, validation_data = pickle.load(open(conf["data_path"], 'rb'))
     dev_batches = reader.build_batches(validation_data, conf)
+    test_batches = reader.build_batches(test_data, conf)
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - Finish Data Pre-processing')
     #Print configuration setting
     print('configurations: %s' %conf)
@@ -210,7 +211,7 @@ def train(conf, _model):
             _model.saver.restore(pre_m_sess, os.path.join(conf["save_path"], conf["init_model"]))
             print("success init model %s" % str(os.path.join(conf["save_path"], conf["init_model"])))
 
-        _pretrain_model_name = _pretrain_matching(pre_m_sess, _graph, _model, conf, train_data, dev_batches)
+        _pretrain_model_name = _pretrain_matching(pre_m_sess, _graph, _model, conf, train_data, test_batches)
         if _pretrain_model_name != '' or None: conf["init_model"] = str(_pretrain_model_name)
         print('Pretrained Model Save Name (Matching): %s' % (str(conf["init_model"])))
 
@@ -227,6 +228,7 @@ def train(conf, _model):
         # refine conf
         batch_num = int(len(train_data['y']) / conf["batch_size"])
         dev_batch_num = len(dev_batches["response"])
+        test_batch_num = len(test_batches["response"])
 
         conf["train_steps"] = conf["num_scan_data"] * batch_num
         conf["save_step"] = int(max(1, batch_num / 10))
@@ -309,7 +311,7 @@ def train(conf, _model):
                     print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + ' - save step: %s' %index)
                     average_calibrate_rate, average_calibrated_correctness = 0.0, 0.0
                     m_label_list, c_label_list, m_y_pred_list, c_y_pred_list = [], [], [], []
-                    for batch_index in xrange(dev_batch_num):
+                    for batch_index in xrange(test_batch_num):
 
                         _feed = {
                             #_model.is_pretrain_calibration: True,
@@ -317,12 +319,12 @@ def train(conf, _model):
                             #_model.is_backprop_calibration: False,
                             #_model.is_backprop_matching: False,
                             #_model.calibration_type: conf['calibration_type'],
-                            _model._turns: dev_batches["turns"][batch_index],
-                            _model._tt_turns_len: dev_batches["tt_turns_len"][batch_index],
-                            _model._every_turn_len: dev_batches["every_turn_len"][batch_index],
-                            _model._response: dev_batches["response"][batch_index],
-                            _model._response_len: dev_batches["response_len"][batch_index],
-                            _model._label: dev_batches["label"][batch_index]
+                            _model._turns: test_batches["turns"][batch_index],
+                            _model._tt_turns_len: test_batches["tt_turns_len"][batch_index],
+                            _model._every_turn_len: test_batches["every_turn_len"][batch_index],
+                            _model._response: test_batches["response"][batch_index],
+                            _model._response_len: test_batches["response_len"][batch_index],
+                            _model._label: test_batches["label"][batch_index]
                         }
 
                         m_y_pred = _sess.run([ _model.m_y_pred], feed_dict=_feed)
@@ -335,7 +337,7 @@ def train(conf, _model):
                         #calibrated_correctness = accuracy_score(calibrated_label, dev_batches["label"][batch_index])
                         #average_calibrate_rate += calibrated_rate
                         #average_calibrated_correctness += calibrated_correctness
-                        m_label_list.extend(dev_batches["label"][batch_index])
+                        m_label_list.extend(test_batches["label"][batch_index])
                         m_y_pred_list.extend(list(m_y_pred[0][:, -1]))
 
                     #print('Data Calibration Rate: %.4f' % (average_correction_rate/dev_batch_num))
