@@ -264,7 +264,7 @@ def train(conf, _model):
                 m_m_loss += total_loss
 
                 # -------------------- Calibration Model Optimisation ------------------- #
-                if step % conf['validation_step'] == 0:
+                '''if step % conf['validation_step'] == 0:
                     shuffle_validation_data = reader.unison_shuffle(validation_data)
                     validation_batches = reader.build_batches(shuffle_validation_data, conf)
                     validation_batch_num = len(validation_batches["response"])
@@ -293,15 +293,14 @@ def train(conf, _model):
 
                         c_loss, g_updates = _sess.run([_model.c_loss, _model.g_updates], feed_dict=_feed)
 
-                        c_m_loss += c_loss
+                        c_m_loss += c_loss'''
 
                 step += 1
 
                 if step % conf["print_step"] == 0 and step > 0:
                     g_step, lr = _sess.run([_model.global_step, _model.learning_rate])
                     print("processed: [%.4f]" % (float(step * 1.0 / batch_num)))
-                    print("[Joint Model] - step: %d , lr: %f , m_loss: [%.6f], c_loss: [%.6f]" %(
-                            g_step, lr, (m_m_loss / conf["print_step"]), (c_m_loss / conf["print_step"])))
+                    print("[Joint Model] - step: %d , lr: %f , loss: [%.6f]" %(g_step, lr, (m_m_loss / conf["print_step"])))
                     m_m_loss, c_m_loss = 0.0, 0.0
 
                 if step % conf["save_step"] == 0 and step > 0:

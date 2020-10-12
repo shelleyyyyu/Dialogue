@@ -180,7 +180,7 @@ class Net(object):
             print('sim shape: %s' % c_sim.shape)
             with tf.variable_scope('c_cnn_aggregation'):
                 # for douban
-                c_final_info = layers.CNN_3d(c_sim, 16, 16)
+                c_final_info = layers.CNN_3d(c_sim, 32, 16)
 
             # ========== Matching Network ==========
 
@@ -288,7 +288,7 @@ class Net(object):
             print('sim shape: %s' % m_sim.shape)
             with tf.variable_scope('m_cnn_aggregation'):
                 # for douban
-                m_final_info = layers.CNN_3d(m_sim, 16, 16)
+                m_final_info = layers.CNN_3d(m_sim, 32, 16)
 
             # loss and train
             with tf.variable_scope('loss'):
@@ -346,7 +346,7 @@ class Net(object):
                     g_updates = Optimizer.apply_gradients(
                         capped_gvs,
                         global_step=self.global_step)
-                    return g_updates, tf.constant(111)
+                    return g_updates
                 def m_loss_fn():
                     self.optimizer = Optimizer.minimize(self.m_loss, global_step=self.global_step)
                     grads_and_vars = Optimizer.compute_gradients(self.m_loss)
@@ -359,7 +359,7 @@ class Net(object):
                     g_updates = Optimizer.apply_gradients(
                         capped_gvs,
                         global_step=self.global_step)
-                    return g_updates, tf.constant(222)
+                    return g_updates
                 def c_m_loss_fn():
                     self.optimizer = Optimizer.minimize(self.c_loss, global_step=self.global_step)
                     grads_and_vars = Optimizer.compute_gradients(self.c_loss)
@@ -372,7 +372,7 @@ class Net(object):
                     g_updates = Optimizer.apply_gradients(
                         capped_gvs,
                         global_step=self.global_step)
-                    return g_updates, tf.constant(333)
+                    return g_updates
                 def c_m_loss_fn2():
                     self.optimizer = Optimizer.minimize(self.total_loss, global_step=self.global_step)
                     grads_and_vars = Optimizer.compute_gradients(self.total_loss)
@@ -385,9 +385,9 @@ class Net(object):
                     g_updates = Optimizer.apply_gradients(
                         capped_gvs,
                         global_step=self.global_step)
-                    return g_updates, tf.constant(444)
+                    return g_updates
 
-                self.g_updates, test = tf.case({tf.equal(self.is_pretrain_calibration, tf.constant(True)): c_loss_fn,
+                self.g_updates = tf.case({tf.equal(self.is_pretrain_calibration, tf.constant(True)): c_loss_fn,
                      tf.equal(self.is_pretrain_matching, tf.constant(True)): m_loss_fn,
                      tf.equal(self.is_backprop_calibration, tf.constant(True)): c_m_loss_fn,
                      tf.equal(self.is_backprop_matching, tf.constant(True)): c_m_loss_fn2},
@@ -395,4 +395,3 @@ class Net(object):
 
 
         return self._graph
-
