@@ -18,18 +18,19 @@ import bin.test_and_evaluate as test
 
 conf = {
     "data_path": "./data/jdqa/data.pkl",
-    "word_emb_init": "./data/jdqa/word_embedding.pkl",
-    "save_path": "./output/jdqa_A_D100_05/",
+    "word_emb_init": './data/jdqa/word_embedding.pkl',
+    "word_to_id": "./data/jdqa/word2id",
+    "save_path": "./output/jdqa_A_B100/",
     "init_model": None, #should be set for test
 
-    "rand_seed": None, 
+    "rand_seed": None,
 
     "drop_dense": None,
     "drop_attention": None,
 
     "is_mask": True,
     "is_layer_norm": True,
-    "is_positional": False,  
+    "is_positional": False,
 
     "stack_num": 5,
     "c_stack_num": 5,
@@ -53,19 +54,27 @@ conf = {
 
     "calibration_type": 0, #0: labels 1: logits
 
-    "calibration_max_step": 1000000000000,
-    "matching_max_step": 1000000000000,
+    "calibration_max_step": 10000000000,
+    "matching_max_step": 10000000000,
     "validation_step": 100, #correspond to n
     "validation_update_batch_percentage": 0.5, #correspond to m
 
     "decay_steps": 1000,
-    "decay_rate": 1.0,
+    "decay_rate": 0.9,
     #cross_entropy / hinge
     "matching_loss_type": 'cross_entropy',
     #"calibration_loss_type": 'hinge',
     #"matching_loss_type": 'hinge',
-    "calibration_loss_type": 'cross_entropy'
+    "calibration_loss_type": 'cross_entropy',
+
+    "positive_sample_threshold": 0.9,
+    "negative_sample_threshold": 0.1
 }
 
 joint_model = joint_net.Net(conf)
-train.train(conf, joint_model)
+final_model_save_name = train.train(conf, joint_model)
+conf['init_model'] = final_model_save_name
+print('=' * 60 + '\n' + 'Start Testing' + '\n' + '=' * 60)
+print('Init model ckpt: %s'%final_model_save_name)
+joint_test_model = joint_net.Net(conf)
+test.test(conf, joint_test_model, type='test')
