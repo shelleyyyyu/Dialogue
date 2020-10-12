@@ -298,7 +298,7 @@ class Net(object):
                 self.c_accuracy = tf.reduce_mean(tf.cast(self.c_correct, 'float'))
 
                 # Use the c_y_pred abd define the calibrated label for the matching model (classifier)
-                c_label = tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.float32)
+                '''c_label = tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.float32)
 
                 def f_pretrain_matching():
                     return self._label, tf.constant(-1)
@@ -313,11 +313,11 @@ class Net(object):
                                         tf.equal(self.calibration_type, tf.constant(0)): f_calibration_type_0,
                                         tf.equal(self.calibration_type, tf.constant(1)): f_calibration_type_1,
                                         tf.equal(self.calibration_type, tf.constant(2)): f_calibration_type_2},
-                            default=f_pretrain_matching, exclusive=False)
+                            default=f_pretrain_matching, exclusive=False)'''
 
 
-                self.m_loss, self.m_logits, self.m_y_pred = layers.matching_loss(m_final_info, target_label, loss_type=self._conf['matching_loss_type'])
-                self.m_correct = tf.equal(tf.cast(tf.argmax(self.m_y_pred, axis=1), tf.int32), tf.to_int32(target_label))
+                self.m_loss, self.m_logits, self.m_y_pred = layers.matching_loss(m_final_info, self._label, loss_type=self._conf['matching_loss_type'])
+                self.m_correct = tf.equal(tf.cast(tf.argmax(self.m_y_pred, axis=1), tf.int32), tf.to_int32(self._label))
                 self.m_accuracy = tf.reduce_mean(tf.cast(self.m_correct, 'float'))
                 self.total_loss = self.m_loss+self.c_loss
 
