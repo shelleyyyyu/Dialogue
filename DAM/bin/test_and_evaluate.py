@@ -48,11 +48,11 @@ def test(conf, _model, type='test'):
         for batch_index in xrange(test_batch_num):
 
             _feed = {
-                _model.is_pretrain_calibration: True,
-                _model.is_pretrain_matching: True,
-                _model.is_backprop_calibration: False,
-                _model.is_backprop_matching: False,
-                _model.calibration_type: conf['calibration_type'],
+                #_model.is_pretrain_calibration: True,
+                #_model.is_pretrain_matching: True,
+                #_model.is_backprop_calibration: False,
+                #_model.is_backprop_matching: False,
+                #_model.calibration_type: conf['calibration_type'],
                 _model._turns: test_batches["turns"][batch_index],
                 _model._tt_turns_len: test_batches["tt_turns_len"][batch_index],
                 _model._every_turn_len: test_batches["every_turn_len"][batch_index],
@@ -61,22 +61,22 @@ def test(conf, _model, type='test'):
                 _model._label: test_batches["label"][batch_index],
                 }
 
-            c_y_pred, m_y_pred = _sess.run([_model.c_y_pred, _model.m_y_pred], feed_dict=_feed)
+            m_y_pred = _sess.run([_model.m_y_pred], feed_dict=_feed)
 
-            if conf['calibration_loss_type'] == 'hinge':
-                calibrated_label = [str(int(l)) for l in c_y_pred]
-            elif conf['calibration_loss_type'] == 'cross_entropy':
-                calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_y_pred]
-            calibrated_rate = 1 - accuracy_score(calibrated_label, test_batches["label"][batch_index])
-            average_calibrate_rate += calibrated_rate
+            #if conf['calibration_loss_type'] == 'hinge':
+            #    calibrated_label = [str(int(l)) for l in c_y_pred]
+            #elif conf['calibration_loss_type'] == 'cross_entropy':
+            #    calibrated_label = ['1' if scores[1] > scores[0] else '0' for scores in c_y_pred]
+            #calibrated_rate = 1 - accuracy_score(calibrated_label, test_batches["label"][batch_index])
+            #average_calibrate_rate += calibrated_rate
 
             for i in xrange(conf["batch_size"]):
                 score_file.write(
-                    str(c_y_pred[i][-1]) + '\t' +
+                    #str(c_y_pred[i][-1]) + '\t' +
                     str(m_y_pred[i][-1]) + '\t' +
                     str(test_batches["label"][batch_index][i]) + '\n')
         
-        print('Data Calibration Rate: %.4f' % (average_calibrate_rate/test_batch_num))
+        #print('Data Calibration Rate: %.4f' % (average_calibrate_rate/test_batch_num))
         score_file.close()
         print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + ' - finish test')
         
