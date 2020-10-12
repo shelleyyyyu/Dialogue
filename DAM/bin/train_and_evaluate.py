@@ -274,7 +274,7 @@ def train(conf, _model):
                 }
 
                 #m_loss, g_updates = _sess.run([_model.m_loss, _model.g_updates], feed_dict=_feed)
-                c_y_pred, refine_label, m_loss, g_updates = _sess.run([_model.c_y_pred, _model.refine_label, _model.m_loss, _model.g_updates], feed_dict=_feed)
+                c_y_pred, refine_label, total_loss, g_updates = _sess.run([_model.c_y_pred, _model.refine_label, _model.total_loss, _model.g_updates], feed_dict=_feed)
                 for j in range(conf['batch_size']):
                     q = ' '.join([id_to_word[i]for i in train_batches["turns"][batch_index][j][0] if i != 0 and i != 1 and i in word2id])
                     r = ' '.join([id_to_word[i]for i in list(train_batches["response"][batch_index][j]) if i != 0 and i != 1 and i in word2id])
@@ -284,7 +284,7 @@ def train(conf, _model):
                     #isSame = str(o_l == r_l)
                     #data_calibration_log.append('\t'.join([q, r, o_l, r_l, label_1_prob, isSame]))
                     data_calibration_log.append([q, r, o_l, r_l, label_1_prob])
-                matching_loss += m_loss
+                matching_loss += total_loss
 
                 # -------------------- Calibration Model Optimisation ------------------- #
                 if step % conf['validation_step'] == 0:
