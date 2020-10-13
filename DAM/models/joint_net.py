@@ -53,6 +53,16 @@ class Net(object):
                 dtype=tf.float32,
                 initializer=word_embedding_initializer)
 
+            self.min_threshold = tf.get_variable(
+                name='min_threshold',
+                shape=[],
+                initializer=tf.constant_initializer(0.1))
+
+            self.max_threshold = tf.get_variable(
+                name='max_threshold',
+                shape=[],
+                initializer=tf.constant_initializer(0.9))
+
             # define placehloders
             self._turns = tf.placeholder(
                 tf.int32,
@@ -314,11 +324,17 @@ class Net(object):
                         def fn3():
                             return true
 
-                        #refine_label = tf.cond(tf.equal(true, tf.cast(tf.constant(0), tf.float32)), fn1, fn2)
+                        #refine_label = \
+                        #    tf.case({tf.greater(c_y_pred[i, -1], tf.cast(self._conf['positive_sample_threshold'], tf.float32)): fn1,
+                        #             tf.greater(tf.cast(self._conf['negative_sample_threshold'], tf.float32), c_y_pred[i, -1]): fn2},
+                        #            default=fn3, exclusive=False)
+
                         refine_label = \
-                            tf.case({tf.greater(c_y_pred[i, -1], tf.cast(self._conf['positive_sample_threshold'], tf.float32)): fn1,
-                                     tf.greater(tf.cast(self._conf['negative_sample_threshold'], tf.float32), c_y_pred[i, -1]): fn2},
+                            tf.case({tf.greater(c_y_pred[i, -1], self.max_threshold): fn1,
+                                     tf.greater(tf.cast(self.min_threshold, tf.float32),
+                                                c_y_pred[i, -1]): fn2},
                                     default=fn3, exclusive=False)
+
                         target_label.append(refine_label)
                     return target_label
 

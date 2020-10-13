@@ -251,7 +251,7 @@ def train(conf, _model):
         step, best_result = 0, 0.0
         #c_summaries, m_summaries = None, None
         for epoch in xrange(conf["num_scan_data"]):
-            q_list, r_list, truth_label_list, calibrate_label_list, calibrate_score_list = [], [], [], [], []
+            q_list, r_list, truth_label_list, calibrate_label_list, calibrate_score_list, min_threshold_list, max_threshold_list = [], [], [], [], [], [], []
             print('starting shuffle train data')
             shuffle_train = reader.unison_shuffle(train_data)
             train_batches = reader.build_batches(shuffle_train, conf)
@@ -276,13 +276,15 @@ def train(conf, _model):
 
                 #m_loss, g_updates = _sess.run([_model.m_loss, _model.g_updates], feed_dict=_feed)
 
-                c_y_pred, refine_label, total_loss, g_updates = _sess.run([_model.c_y_pred, _model.refine_label, _model.total_loss, _model.g_updates], feed_dict=_feed)
+                min_threshold, max_threshold, c_y_pred, refine_label, total_loss, g_updates = _sess.run([_model.min_threshold, _model.max_threshold, _model.c_y_pred, _model.refine_label, _model.total_loss, _model.g_updates], feed_dict=_feed)
 
                 q_list.extend(train_batches["turns"][batch_index])
                 r_list.extend(train_batches["response"][batch_index])
                 truth_label_list.extend(train_batches["label"][batch_index])
                 calibrate_label_list.extend(refine_label)
                 calibrate_score_list.extend(c_y_pred[:, -1])
+                min_threshold_list.extend([min_threshold]*conf['batch_size'])
+                max_threshold_list.extend([max_threshold]*conf['batch_size'])
 
                 matching_loss += total_loss
 
@@ -380,7 +382,9 @@ def train(conf, _model):
                     truth_label = truth_label_list[j]
                     calibrate_label = calibrate_label_list[j]
                     score = calibrate_score_list[j]
-                    o_f.write("%s \t %s \t %d \t %d \t %.3f \n " % (q, r, int(truth_label), int(calibrate_label), score))
+                    min_th = min_threshold_list[j]
+                    max_th = max_threshold_list[j]
+                    o_f.write("%s \t %s \t %d \t %d \t %.3f \t %.2f \t %.2f \n" % (q, r, int(truth_label), int(calibrate_label), score, min_th, max_th))
 
             # Update the Matching model variables to the calibration model when one epoch end
             t_vars = tf.trainable_variables()
