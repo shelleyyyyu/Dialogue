@@ -315,9 +315,9 @@ def train(conf, _model):
                             _model._label: validation_batches["label"][validation_batch_index]
                         }
 
-                        c_loss, g_updates = _sess.run([_model.c_loss, _model.g_updates], feed_dict=_feed)
+                        total_loss, g_updates = _sess.run([_model.total_loss, _model.g_updates], feed_dict=_feed)
 
-                        calibration_loss += c_loss
+                        calibration_loss += total_loss
 
                 step += 1
 

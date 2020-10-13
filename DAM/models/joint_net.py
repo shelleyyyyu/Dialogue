@@ -326,11 +326,11 @@ class Net(object):
                     #print(self._label)
                     return tf.cast(self._label, tf.int32)#, tf.constant(-1)
                 def f_calibration_type_0():
-                    #target_label = calibrate_label(self.c_y_pred, self._label)
-                    #stacked_target_label = tf.stack(target_label)
+                    target_label = calibrate_label(self.c_y_pred, self._label)
+                    stacked_target_label = tf.stack(target_label)
                     #print(stacked_target_label)
-                    #return stacked_target_label#, tf.constant(0)
-                    return tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.int32)
+                    return stacked_target_label#, tf.constant(0)
+                    #return tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.int32)
                 #def f_calibration_type_1():
                 #    return self.c_y_pred[:, -1], tf.constant(1)
                 #def f_calibration_type_2():
@@ -388,11 +388,11 @@ class Net(object):
                         global_step=self.global_step)
                     return g_updates, tf.constant(222)
                 def c_m_loss_fn():
-                    self.optimizer = Optimizer.minimize(self.c_loss, global_step=self.global_step)
-                    grads_and_vars = Optimizer.compute_gradients(self.c_loss)
+                    self.optimizer = Optimizer.minimize(self.total_loss, global_step=self.global_step)
+                    grads_and_vars = Optimizer.compute_gradients(self.total_loss)
                     target_grads_and_vars = []
                     for grad, var in grads_and_vars:
-                        if grad is not None and ('c_' in var.name):
+                        if grad is not None: #and ('c_' in var.name):
                             target_grads_and_vars.append((grad, var))
                     print(len(target_grads_and_vars))
                     capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in target_grads_and_vars]
