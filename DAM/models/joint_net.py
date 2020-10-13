@@ -343,7 +343,21 @@ class Net(object):
                 #            default=f_pretrain_matching, exclusive=False)
 
                 self.refine_label = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), f_pretrain_matching, f_calibration_type_0)
-                self.m_loss, self.m_logits, self.m_y_pred = layers.matching_loss(m_final_info, self.refine_label, loss_type=self._conf['matching_loss_type'])
+
+                def match_loss_f1():
+                    m_loss, m_logits, m_y_pred = layers.matching_loss(m_final_info, self.refine_label,
+                                             loss_type=self._conf['matching_loss_type'])
+                    return m_loss, m_logits, m_y_pred
+
+                def match_loss_f2():
+                    m_loss, m_logits, m_y_pred = layers.matching_mix_loss(m_final_info, self.c_logits, self.refine_label,
+                                             loss_type=self._conf['matching_loss_type'])
+                    return m_loss, m_logits, m_y_pred
+
+
+                self.m_loss, self.m_logits, self.m_y_pred = tf.cond(tf.equal(self.is_pretrain_matching, tf.constant(True)), match_loss_f1, match_loss_f2)
+
+                #self.m_loss, self.m_logits, self.m_y_pred = layers.matching_mix_loss(m_final_info, c_final_info, self.refine_label, loss_type=self._conf['matching_loss_type'])
                 #self.m_correct = tf.equal(tf.cast(tf.argmax(self.m_y_pred, axis=1), tf.int32), tf.to_int32(self.refine_label))
                 #self.m_accuracy = tf.reduce_mean(tf.cast(self.m_correct, 'float'))
                 self.total_loss = self.m_loss+self.c_loss

@@ -92,19 +92,20 @@ def calibration_loss(x, y, num_classes=2, is_clip=True, clip_value=10, loss_type
     assert num_classes >= 2
 
     if loss_type == 'cross_entropy':
-        W = tf.get_variable(
-            name='c_weights',
-            shape=[x.shape[-1], num_classes],
-            initializer=tf.orthogonal_initializer())
-        bias = tf.get_variable(
-            name='c_bias',
-            shape=[num_classes],
-            initializer=tf.zeros_initializer())
-        logits = tf.matmul(x, W) + bias
-        y_pred = tf.nn.softmax(logits)
-        loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(y, tf.int32), logits=logits)
-        loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
-    elif loss_type == 'hinge':
+        with tf.variable_scope('calibration_logits', reuse=tf.AUTO_REUSE) as scope:
+            W = tf.get_variable(
+                name='c_weights',
+                shape=[x.shape[-1], num_classes],
+                initializer=tf.orthogonal_initializer())
+            bias = tf.get_variable(
+                name='c_bias',
+                shape=[num_classes],
+                initializer=tf.zeros_initializer())
+            logits = tf.matmul(x, W) + bias
+            y_pred = tf.nn.softmax(logits)
+            loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(y, tf.int32), logits=logits)
+            loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
+    '''elif loss_type == 'hinge':
         W = tf.get_variable(
             name='c_weights',
             shape=[x.shape[-1], num_classes-1],
@@ -118,7 +119,7 @@ def calibration_loss(x, y, num_classes=2, is_clip=True, clip_value=10, loss_type
         #print(tf.transpose(logits)[0].shape)
         #print(tf.cast(y, tf.int32).shape)
         loss = tf.losses.hinge_loss(labels=tf.cast(y, tf.int32), logits=tf.transpose(logits)[0])
-        loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
+        loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))'''
 
     return loss, logits, y_pred
 
@@ -128,19 +129,20 @@ def matching_loss(x, y, num_classes=2, is_clip=True, clip_value=10, loss_type= '
     assert num_classes >= 2
 
     if loss_type == 'cross_entropy':
-        W = tf.get_variable(
-            name='m_weights',
-            shape=[x.shape[-1], num_classes],
-            initializer=tf.orthogonal_initializer())
-        bias = tf.get_variable(
-            name='m_bias',
-            shape=[num_classes],
-            initializer=tf.zeros_initializer())
-        logits = tf.matmul(x, W) + bias
-        y_pred = tf.nn.softmax(logits)
-        loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(y, tf.int32), logits=logits)
-        loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
-    elif loss_type == 'hinge':
+        with tf.variable_scope('matching_logits', reuse=tf.AUTO_REUSE):
+            W = tf.get_variable(
+                name='m_weights',
+                shape=[x.shape[-1], num_classes],
+                initializer=tf.orthogonal_initializer())
+            bias = tf.get_variable(
+                name='m_bias',
+                shape=[num_classes],
+                initializer=tf.zeros_initializer())
+            logits = tf.matmul(x, W) + bias
+            y_pred = tf.nn.softmax(logits)
+            loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(y, tf.int32), logits=logits)
+            loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
+    '''elif loss_type == 'hinge':
         W = tf.get_variable(
             name='m_weights',
             shape=[x.shape[-1], num_classes - 1],
@@ -152,9 +154,57 @@ def matching_loss(x, y, num_classes=2, is_clip=True, clip_value=10, loss_type= '
         logits = tf.matmul(x, W) + bias
         y_pred = tf.nn.softmax(logits)
         loss = tf.losses.hinge_loss(labels=tf.cast(y, tf.int32), logits=tf.transpose(logits)[0])
-        loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
+        loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))'''
 
     return loss, logits, y_pred
+
+
+def matching_mix_loss(x, c_logits, y, num_classes=2, is_clip=True, clip_value=10, loss_type= 'cross_entropy'):
+    # loss type: cross_entropy or hinge loss
+    assert isinstance(num_classes, int)
+    assert num_classes >= 2
+
+    if loss_type == 'cross_entropy':
+        with tf.variable_scope('matching_logits', reuse=tf.AUTO_REUSE):
+            m_W = tf.get_variable(
+                name='m_weights',
+                shape=[x.shape[-1], num_classes],
+                initializer=tf.orthogonal_initializer())
+            m_bias = tf.get_variable(
+                name='m_bias',
+                shape=[num_classes],
+                initializer=tf.zeros_initializer())
+
+        m_logits = tf.matmul(x, m_W) + m_bias
+        #print(c_logits)
+        #print(m_logits)
+        logits = []
+        for i in range(c_logits.shape[0]):
+            a = tf.cast((c_logits[i][0] + m_logits[i][0])/2, tf.float32)
+            b = tf.cast((c_logits[i][1] + m_logits[i][1])/2, tf.float32)
+            logits.append([a, b])
+        #logits = tf.reduce_mean(tf.concat([c_logits, m_logits], axis=1), axis=1)
+        logits = tf.stack(logits)
+        #print(logits)
+        y_pred = tf.nn.softmax(logits)
+        loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(y, tf.int32), logits=logits)
+        loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))
+    '''elif loss_type == 'hinge':
+        W = tf.get_variable(
+            name='m_weights',
+            shape=[x.shape[-1], num_classes - 1],
+            initializer=tf.orthogonal_initializer())
+        bias = tf.get_variable(
+            name='m_bias',
+            shape=[num_classes - 1],
+            initializer=tf.zeros_initializer())
+        logits = tf.matmul(x, W) + bias
+        y_pred = tf.nn.softmax(logits)
+        loss = tf.losses.hinge_loss(labels=tf.cast(y, tf.int32), logits=tf.transpose(logits)[0])
+        loss = tf.reduce_mean(tf.clip_by_value(loss, -clip_value, clip_value))'''
+
+    return loss, logits, y_pred
+
 
 def attention(
     Q, K, V, 

@@ -123,10 +123,8 @@ def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
                 _model._label: train_batches["label"][batch_index]
             }
 
-            _, _curr_loss = _sess.run([ _model.g_updates, _model.m_loss], feed_dict=_feed)
+            _, _curr_loss = _sess.run([_model.g_updates, _model.m_loss], feed_dict=_feed)
 
-            #print(refine_label)
-            #print(_label)
             average_loss += _curr_loss
 
             step += 1
@@ -277,7 +275,6 @@ def train(conf, _model):
                 #m_loss, g_updates = _sess.run([_model.m_loss, _model.g_updates], feed_dict=_feed)
 
                 c_y_pred, refine_label, total_loss, g_updates = _sess.run([_model.c_y_pred, _model.refine_label, _model.total_loss, _model.g_updates], feed_dict=_feed)
-
                 q_list.extend(train_batches["turns"][batch_index])
                 r_list.extend(train_batches["response"][batch_index])
                 truth_label_list.extend(train_batches["label"][batch_index])
@@ -380,7 +377,7 @@ def train(conf, _model):
                     truth_label = truth_label_list[j]
                     calibrate_label = calibrate_label_list[j]
                     score = calibrate_score_list[j]
-                    o_f.write("%s \t %s \t %d \t %d \t %.3f \n " % (q, r, int(truth_label), int(calibrate_label), score))
+                    o_f.write("%s \t %s \t %d \t %d \t %.3f \n" % (q, r, int(truth_label), int(calibrate_label), score))
 
             # Update the Matching model variables to the calibration model when one epoch end
             t_vars = tf.trainable_variables()
