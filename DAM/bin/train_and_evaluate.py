@@ -88,6 +88,7 @@ def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
                     print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + " - success saving model - " + _pretrain_update_model_save_name + " - in " + save_path)
                 if step >= conf["calibration_max_step"]:
                     break
+
     return _pretrain_update_model_save_name
 
 def _pretrain_matching(_sess, _graph, _model, conf, train_data, dev_batches):
@@ -375,5 +376,27 @@ def train(conf, _model):
             with open(os.path.join(conf['save_path'], fname), 'w') as o_f:
                 for log in data_calibration_log:
                     o_f.write(log[0] + '\t' + log[1] + '\t' + str(log[2]) + '\t' + str(int(log[3])) + '\t' + log[4] +'\n')
+
+            # Update the Matching model variables to the calibration model when one epoch end
+            t_vars = tf.trainable_variables()
+            var_in_m_model = [var for var in t_vars if 'm_' in var.name]
+            var_in_c_model = [var for var in t_vars if 'c_' in var.name]
+            #print(len(var_in_m_model))
+            #print(len(var_in_c_model))
+
+            #for index, var in enumerate(var_in_m_model):
+            #    print(index, var)
+            #for index, var in enumerate(var_in_c_model):
+            #    print(index, var)
+            if conf['update_cmodel_epoch_end']:
+                for var_idx, var in enumerate(var_in_m_model):
+                    #print(var_idx)
+                    #print(var)
+                    #print(var_in_c_model[var_idx])
+                    #print(var_in_m_model[var_idx].eval()[0])
+                    #print(var_in_c_model[var_idx].eval()[0])
+                    var_in_c_model[var_idx].load(var_in_m_model[var_idx].eval(), _sess)
+                    #print(var_in_c_model[var_idx].eval()[0])
+                    #print('-' * 50)
     return final_model_save_name
 

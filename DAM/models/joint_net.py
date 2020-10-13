@@ -324,12 +324,13 @@ class Net(object):
 
                 def f_pretrain_matching():
                     #print(self._label)
-                    return self._label#, tf.constant(-1)
+                    return tf.cast(self._label, tf.int32)#, tf.constant(-1)
                 def f_calibration_type_0():
-                    target_label = calibrate_label(self.c_y_pred, self._label)
-                    stacked_target_label = tf.stack(target_label)
+                    #target_label = calibrate_label(self.c_y_pred, self._label)
+                    #stacked_target_label = tf.stack(target_label)
                     #print(stacked_target_label)
-                    return stacked_target_label#, tf.constant(0)
+                    #return stacked_target_label#, tf.constant(0)
+                    return tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.int32)
                 #def f_calibration_type_1():
                 #    return self.c_y_pred[:, -1], tf.constant(1)
                 #def f_calibration_type_2():
@@ -419,6 +420,22 @@ class Net(object):
                      tf.equal(self.is_backprop_matching, tf.constant(True)): c_m_loss_fn2},
                     default=c_m_loss_fn2, exclusive=False)
 
+                '''t_vars = tf.trainable_variables()
+                var_in_m_model = [var for var in t_vars if 'm_' in var.name]
+                var_in_c_model = [var for var in t_vars if 'c_' in var.name]
+                print(len(var_in_m_model))
+                print(len(var_in_c_model))
+                # for index, var in enumerate(var_in_m_model):
+                #    print(index, var)
+                # for index, var in enumerate(var_in_c_model):
+                #    print(index, var)
+
+                for var_idx, var in enumerate(var_in_m_model):
+                    # print(var_idx)
+                    # print(var)
+                    # print(var_in_c_model[var_idx])
+                    print('-' * 50)
+                    tf.assign(var_in_c_model[var_idx], var)'''
 
         return self._graph
 
