@@ -68,7 +68,9 @@ conf = {
     "calibration_loss_type": 'cross_entropy',
 
     "positive_sample_threshold": 0.9,
-    "negative_sample_threshold": 0.1
+    "negative_sample_threshold": 0.1,
+
+    "update_cmodel_epoch_end": True
 }
 
 joint_model = joint_net.Net(conf)

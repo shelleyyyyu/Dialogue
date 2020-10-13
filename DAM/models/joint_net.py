@@ -419,6 +419,22 @@ class Net(object):
                      tf.equal(self.is_backprop_matching, tf.constant(True)): c_m_loss_fn2},
                     default=c_m_loss_fn2, exclusive=False)
 
+                '''t_vars = tf.trainable_variables()
+                var_in_m_model = [var for var in t_vars if 'm_' in var.name]
+                var_in_c_model = [var for var in t_vars if 'c_' in var.name]
+                print(len(var_in_m_model))
+                print(len(var_in_c_model))
+                # for index, var in enumerate(var_in_m_model):
+                #    print(index, var)
+                # for index, var in enumerate(var_in_c_model):
+                #    print(index, var)
+
+                for var_idx, var in enumerate(var_in_m_model):
+                    # print(var_idx)
+                    # print(var)
+                    # print(var_in_c_model[var_idx])
+                    print('-' * 50)
+                    tf.assign(var_in_c_model[var_idx], var)'''
 
         return self._graph
 
