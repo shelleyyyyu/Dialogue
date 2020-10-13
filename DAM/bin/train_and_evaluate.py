@@ -251,7 +251,7 @@ def train(conf, _model):
         step, best_result = 0, 0.0
         #c_summaries, m_summaries = None, None
         for epoch in xrange(conf["num_scan_data"]):
-            data_calibration_log = []
+            q_list, r_list, truth_label_list, calibrate_label_list, calibrate_score_list = [], [], [], [], []
             print('starting shuffle train data')
             shuffle_train = reader.unison_shuffle(train_data)
             train_batches = reader.build_batches(shuffle_train, conf)
@@ -275,16 +275,15 @@ def train(conf, _model):
                 }
 
                 #m_loss, g_updates = _sess.run([_model.m_loss, _model.g_updates], feed_dict=_feed)
+
                 c_y_pred, refine_label, total_loss, g_updates = _sess.run([_model.c_y_pred, _model.refine_label, _model.total_loss, _model.g_updates], feed_dict=_feed)
-                for j in range(conf['batch_size']):
-                    q = ' '.join([id_to_word[i]for i in train_batches["turns"][batch_index][j][0] if i != 0 and i != 1 and i in word2id])
-                    r = ' '.join([id_to_word[i]for i in list(train_batches["response"][batch_index][j]) if i != 0 and i != 1 and i in word2id])
-                    o_l = train_batches["label"][batch_index][j]
-                    r_l = list(refine_label)[j]
-                    label_1_prob = '%.3f'%(c_y_pred[j][-1])
-                    #isSame = str(o_l == r_l)
-                    #data_calibration_log.append('\t'.join([q, r, o_l, r_l, label_1_prob, isSame]))
-                    data_calibration_log.append([q, r, o_l, r_l, label_1_prob])
+
+                q_list.extend(train_batches["turns"][batch_index])
+                r_list.extend(train_batches["response"][batch_index])
+                truth_label_list.extend(train_batches["label"][batch_index])
+                calibrate_label_list.extend(refine_label)
+                calibrate_score_list.extend(c_y_pred[:, -1])
+
                 matching_loss += total_loss
 
                 # -------------------- Calibration Model Optimisation ------------------- #
@@ -372,10 +371,16 @@ def train(conf, _model):
                         save_path = _model.saver.save(_sess, conf["save_path"] + "joint_learning_model.ckpt." + str(int((step / conf["save_step"]))))
                         print(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) + " - finish evaluation - success saving model in " + save_path)
                         final_model_save_name = save_path
+
             fname = 'data.calibration.epoch.{}.txt'.format(epoch)
             with open(os.path.join(conf['save_path'], fname), 'w') as o_f:
-                for log in data_calibration_log:
-                    o_f.write(log[0] + '\t' + log[1] + '\t' + str(log[2]) + '\t' + str(int(log[3])) + '\t' + log[4] +'\n')
+                for j in range(len(calibrate_label_list)):
+                    q = ' '.join([id_to_word[i] for i in q_list[j][0] if i != 0 and i != 1 and i in id_to_word])
+                    r = ' '.join([id_to_word[i] for i in r_list[j] if i != 0 and i != 1 and i in id_to_word])
+                    truth_label = truth_label_list[j]
+                    calibrate_label = calibrate_label_list[j]
+                    score = calibrate_score_list[j]
+                    o_f.write("%s \t %s \t %d \t %d \t %.3f \n " % (q, r, int(truth_label), int(calibrate_label), score))
 
             # Update the Matching model variables to the calibration model when one epoch end
             t_vars = tf.trainable_variables()
