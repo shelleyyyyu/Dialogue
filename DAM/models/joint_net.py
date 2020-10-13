@@ -326,11 +326,11 @@ class Net(object):
                     #print(self._label)
                     return tf.cast(self._label, tf.int32)#, tf.constant(-1)
                 def f_calibration_type_0():
-                    #target_label = calibrate_label(self.c_y_pred, self._label)
-                    #stacked_target_label = tf.stack(target_label)
+                    target_label = calibrate_label(self.c_y_pred, self._label)
+                    stacked_target_label = tf.stack(target_label)
                     #print(stacked_target_label)
-                    #return stacked_target_label#, tf.constant(0)
-                    return tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.int32)
+                    return tf.cast(stacked_target_label, tf.int32)#, tf.constant(0)
+                    #return tf.cast(tf.argmax(self.c_y_pred, axis=1), tf.int32)
                 #def f_calibration_type_1():
                 #    return self.c_y_pred[:, -1], tf.constant(1)
                 #def f_calibration_type_2():
