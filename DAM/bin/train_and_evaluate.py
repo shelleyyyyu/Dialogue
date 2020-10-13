@@ -381,8 +381,8 @@ def train(conf, _model):
             t_vars = tf.trainable_variables()
             var_in_m_model = [var for var in t_vars if 'm_' in var.name]
             var_in_c_model = [var for var in t_vars if 'c_' in var.name]
-            print(len(var_in_m_model))
-            print(len(var_in_c_model))
+            #print(len(var_in_m_model))
+            #print(len(var_in_c_model))
 
             #for index, var in enumerate(var_in_m_model):
             #    print(index, var)
