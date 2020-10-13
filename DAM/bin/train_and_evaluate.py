@@ -186,8 +186,8 @@ def train(conf, _model):
     with open(conf['word_to_id'], 'r') as files:
         word2id = files.readlines()
         for line in word2id:
-            id_to_word[line.strip().split('\t')[1]] = line.strip().split('\t')[0]
-            word_to_id[line.strip().split('\t')[0]] = line.strip().split('\t')[1]
+            id_to_word[int(line.strip().split('\t')[1])] = line.strip().split('\t')[0]
+            word_to_id[line.strip().split('\t')[0]] = int(line.strip().split('\t')[1])
 
     # load data
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - start loading data')
@@ -357,7 +357,7 @@ def train(conf, _model):
                         #calibrated_correctness = accuracy_score(calibrated_label, dev_batches["label"][batch_index])
                         #average_calibrate_rate += calibrated_rate
                         #average_calibrated_correctness += calibrated_correctness
-                        m_label_list.extend(dev_batches["label"][batch_index])
+                        m_label_list.extend(test_batches["label"][batch_index])
                         m_y_pred_list.extend(list(m_y_pred[:, -1]))
 
                     #print('Data Calibration Rate: %.4f' % (average_correction_rate/dev_batch_num))
