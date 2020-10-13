@@ -92,7 +92,7 @@ def calibration_loss(x, y, num_classes=2, is_clip=True, clip_value=10, loss_type
     assert num_classes >= 2
 
     if loss_type == 'cross_entropy':
-        with tf.variable_scope('calibration_logits', reuse=tf.AUTO_REUSE) as scope:
+        with tf.variable_scope('calibration_logits'):
             W = tf.get_variable(
                 name='c_weights',
                 shape=[x.shape[-1], num_classes],
@@ -129,7 +129,7 @@ def matching_loss(x, y, num_classes=2, is_clip=True, clip_value=10, loss_type= '
     assert num_classes >= 2
 
     if loss_type == 'cross_entropy':
-        with tf.variable_scope('matching_logits', reuse=tf.AUTO_REUSE):
+        with tf.variable_scope('matching_logits', reuse=None):
             W = tf.get_variable(
                 name='m_weights',
                 shape=[x.shape[-1], num_classes],
@@ -165,7 +165,7 @@ def matching_mix_loss(x, c_logits, y, num_classes=2, is_clip=True, clip_value=10
     assert num_classes >= 2
 
     if loss_type == 'cross_entropy':
-        with tf.variable_scope('matching_logits', reuse=tf.AUTO_REUSE):
+        with tf.variable_scope('matching_logits', reuse=True):
             m_W = tf.get_variable(
                 name='m_weights',
                 shape=[x.shape[-1], num_classes],
