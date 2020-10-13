@@ -20,7 +20,7 @@ conf = {
     "data_path": "./data/jdqa/data.pkl",
     "word_emb_init": './data/jdqa/word_embedding.pkl',
     "word_to_id": "./data/jdqa/word2id",
-    "save_path": "./output/jdqa_A_D100_09/",
+    "save_path": "./output/jdqa_A_D100_05/",
     "init_model": None, #should be set for test
 
     "rand_seed": None,
@@ -57,7 +57,7 @@ conf = {
     "calibration_max_step": 10000000000,
     "matching_max_step": 10000000000,
     "validation_step": 100, #correspond to n
-    "validation_update_batch_percentage": 0.9, #correspond to m
+    "validation_update_batch_percentage": 0.5, #correspond to m
 
     "decay_steps": 1000,
     "decay_rate": 0.9,
@@ -68,7 +68,7 @@ conf = {
     "calibration_loss_type": 'cross_entropy',
 
     "positive_sample_threshold": 0.9,
-    "negative_sample_threshold": 0.1,
+    "negative_sample_threshold": 0.2,
 
     "update_cmodel_epoch_end": True
 }
