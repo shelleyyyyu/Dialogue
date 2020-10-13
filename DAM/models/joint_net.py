@@ -304,13 +304,21 @@ class Net(object):
                         true = true_labels[i]
 
                         def fn1():
-                            return tf.cond(tf.greater(c_y_pred[i, -1], tf.cast(self._conf['positive_sample_threshold'], tf.float32)), lambda:tf.cast(tf.constant(1), tf.float32), lambda: tf.cast(tf.constant(0), tf.float32))
+                            #return tf.cond(tf.greater(c_y_pred[i, -1], tf.cast(self._conf['positive_sample_threshold'], tf.float32)), lambda:tf.cast(tf.constant(1), tf.float32), lambda: tf.cast(tf.constant(0), tf.float32))
+                            return tf.cast(tf.constant(1), tf.float32)
 
                         def fn2():
-                            return tf.cond(tf.greater(tf.cast(self._conf['negative_sample_threshold'], tf.float32), c_y_pred[i, -1]), lambda:tf.cast(tf.constant(0), tf.float32), lambda: tf.cast(tf.constant(1), tf.float32))
+                            #return tf.cond(tf.greater(tf.cast(self._conf['negative_sample_threshold'], tf.float32), c_y_pred[i, -1]), lambda:tf.cast(tf.constant(0), tf.float32), lambda: tf.cast(tf.constant(1), tf.float32))
+                            return tf.cast(tf.constant(0), tf.float32)
 
+                        def fn3():
+                            return true
 
-                        refine_label = tf.cond(tf.equal(true, tf.cast(tf.constant(0), tf.float32)), fn1, fn2)
+                        #refine_label = tf.cond(tf.equal(true, tf.cast(tf.constant(0), tf.float32)), fn1, fn2)
+                        refine_label = \
+                            tf.case({tf.greater(c_y_pred[i, -1], tf.cast(self._conf['positive_sample_threshold'], tf.float32)): fn1,
+                                     tf.greater(tf.cast(self._conf['negative_sample_threshold'], tf.float32), c_y_pred[i, -1]): fn2},
+                                    default=fn3, exclusive=False)
                         target_label.append(refine_label)
                     return target_label
 
