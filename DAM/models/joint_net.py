@@ -401,11 +401,11 @@ class Net(object):
                         global_step=self.global_step)
                     return g_updates, tf.constant(333)
                 def c_m_loss_fn2():
-                    self.optimizer = Optimizer.minimize(self.total_loss, global_step=self.global_step)
-                    grads_and_vars = Optimizer.compute_gradients(self.total_loss)
+                    self.optimizer = Optimizer.minimize(self.m_loss, global_step=self.global_step)
+                    grads_and_vars = Optimizer.compute_gradients(self.m_loss)
                     target_grads_and_vars = []
                     for grad, var in grads_and_vars:
-                        if grad is not None: #and ('m_' in var.name):
+                        if grad is not None and ('m_' in var.name):
                             target_grads_and_vars.append((grad, var))
                     print(len(target_grads_and_vars))
                     capped_gvs = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in target_grads_and_vars]
