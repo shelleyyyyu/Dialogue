@@ -346,7 +346,7 @@ class Net(object):
                 self.m_loss, self.m_logits, self.m_y_pred = layers.matching_loss(m_final_info, self.refine_label, loss_type=self._conf['matching_loss_type'])
                 #self.m_correct = tf.equal(tf.cast(tf.argmax(self.m_y_pred, axis=1), tf.int32), tf.to_int32(self.refine_label))
                 #self.m_accuracy = tf.reduce_mean(tf.cast(self.m_correct, 'float'))
-                #self.total_loss = self.m_loss+self.c_loss
+                self.total_loss = self.m_loss+self.c_loss
 
                 # Start update the network variable
                 self.saver = tf.train.Saver(max_to_keep=self._conf["max_to_keep"])
