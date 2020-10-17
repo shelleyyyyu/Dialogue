@@ -182,7 +182,7 @@ def train(conf, _model):
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - start loading data')
     train_data, test_data, validation_data = pickle.load(open(conf["data_path"], 'rb'))
     dev_batches = reader.build_batches(validation_data, conf)
-    test_batches = reader.build_batches(test_data, conf)
+    test_batches = dev_batches#reader.build_batches(test_data, conf)
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - Finish Data Pre-processing')
     #Print configuration setting
     print('configurations: %s' %conf)
