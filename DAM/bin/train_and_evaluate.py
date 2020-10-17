@@ -12,6 +12,21 @@ import utils.reader as reader
 import utils.evaluation as eva
 from sklearn.metrics import accuracy_score
 
+
+def sample_validation_data(validation_data, _conf):
+    valid_data_amt = len(validation_data['y'])
+    scalar = [i for i in range(valid_data_amt)]
+    selected_valid_idx = random.sample(scalar, int(valid_data_amt * _conf["validation_data_amt"]))
+    new_validation_data = {}
+    new_validation_data['y'] = []
+    new_validation_data['c'] = []
+    new_validation_data['r'] = []
+    for i in selected_valid_idx:
+        new_validation_data['y'].append(validation_data['y'][i])
+        new_validation_data['c'].append(validation_data['c'][i])
+        new_validation_data['r'].append(validation_data['r'][i])
+    return new_validation_data
+
 def _pretrain_calibration(_sess, _graph, _model, conf, train_data, dev_batches):
     _pretrain_update_model_save_name = None
     #conf
@@ -192,6 +207,8 @@ def train(conf, _model):
     # load data
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - start loading data')
     train_data, test_data, validation_data = pickle.load(open(conf["data_path"], 'rb'))
+    if "validation_data_amt" in conf and int(conf["validation_data_amt"]) != int(1):
+        validation_data = sample_validation_data(validation_data, conf)
     dev_batches = reader.build_batches(validation_data, conf)
     test_batches = reader.build_batches(test_data, conf)
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - Finish Data Pre-processing')
