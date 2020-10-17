@@ -78,7 +78,7 @@ def evaluate(file_path):
     eva_dict['P@1'] = 1.0*sum_p_1/total_num
     eva_dict['R10@1'] = 1.0*sum_r_1/total_num
     eva_dict['R10@2'] = 1.0*sum_r_2/total_num
-    #eva_dict['R10@5'] = 1.0*sum_r_5/total_num
+    eva_dict['R10@5'] = 1.0*sum_r_5/total_num
     return eva_dict
 
 def evaluate_auc_from_file(file_path):
