@@ -17,10 +17,10 @@ import bin.test_and_evaluate as test
 
 
 conf = {
-    "data_path": "./data/tieba/data.pkl",
-    "word_emb_init": './data/tieba/word_embedding.pkl',
-    "word_to_id": "./data/tieba/word2id",
-    "save_path": "./output/tieba_A_B100_015_09/",
+    "data_path": "./data/jdqa/data.pkl",
+    "word_emb_init": './data/jdqa/word_embedding.pkl',
+    "word_to_id": "./data/jdqa/word2id",
+    "save_path": "./output/douban_A_D100_05_015_09/",
     "init_model": None, #should be set for test
 
     "rand_seed": None,
@@ -45,7 +45,7 @@ conf = {
     "max_turn_len": 30,
 
     "max_to_keep": 1,
-    "num_scan_data": 5,
+    "num_scan_data": 7,
     "_EOS_": 1, #1 for douban data; 28270 for ubuntu
     "final_n_class": 1,
 
@@ -57,7 +57,7 @@ conf = {
     "calibration_max_step": 10000000000,
     "matching_max_step": 10000000000,
     "validation_step": 100, #correspond to n
-    "validation_update_batch_percentage": 1.0, #correspond to m
+    "validation_update_batch_percentage": 0.5, #correspond to m
 
     "decay_steps": 1000,
     "decay_rate": 0.9,
