@@ -210,7 +210,7 @@ def train(conf, _model):
     if "validation_data_amt" in conf and int(conf["validation_data_amt"]) != int(1):
         validation_data = sample_validation_data(validation_data, conf)
     dev_batches = reader.build_batches(validation_data, conf)
-    test_batches = reader.build_batches(test_data, conf)
+    test_batches = dev_batches#reader.build_batches(test_data, conf)
     print(str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))) + ' - Finish Data Pre-processing')
 
     #Print configuration setting
@@ -304,7 +304,7 @@ def train(conf, _model):
                 matching_loss += total_loss
 
                 # -------------------- Calibration Model Optimisation ------------------- #
-                if step % conf['validation_step'] == 0:
+                if False:
                     shuffle_validation_data = reader.unison_shuffle(validation_data)
                     validation_batches = reader.build_batches(shuffle_validation_data, conf)
                     validation_batch_num = len(validation_batches["response"])
