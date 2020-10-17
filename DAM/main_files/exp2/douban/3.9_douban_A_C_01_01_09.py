@@ -23,7 +23,7 @@ conf = {
     "save_path": "./output/douban_A_C_01_01_09_09/",
     "init_model": None, #should be set for test
 
-    "rand_seed": None,
+    "rand_seed": 1234,
 
     "drop_dense": None,
     "drop_attention": None,

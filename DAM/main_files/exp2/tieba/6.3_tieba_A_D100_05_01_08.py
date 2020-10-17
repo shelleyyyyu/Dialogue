@@ -23,7 +23,7 @@ conf = {
     "save_path": "./output/tieba_A_D100_05_01_08_03/",
     "init_model": None, #should be set for test
 
-    "rand_seed": None,
+    "rand_seed": 1234,
 
     "drop_dense": None,
     "drop_attention": None,
