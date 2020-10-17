@@ -20,7 +20,7 @@ conf = {
     "data_path": "./data/tieba/data.pkl",
     "word_emb_init": './data/tieba/word_embedding.pkl',
     "word_to_id": "./data/tieba/word2id",
-    "save_path": "./output/tieba_A_D100_05_01_08/",
+    "save_path": "./output/tieba_A_D100_05_01_08_no_validation/",
     "init_model": None, #should be set for test
 
     "rand_seed": None,
