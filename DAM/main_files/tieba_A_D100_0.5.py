@@ -19,8 +19,8 @@ import bin.test_and_evaluate as test
 conf = {
     "data_path": "./data/tieba/data.pkl",
     "word_emb_init": "./data/tieba/word_embedding.pkl",
-    "save_path": "./output/tieba_A_C03/",
-    "init_model": "./output/tieba_A_C03/joint_learning_model.ckpt.1", #should be set for test
+    "save_path": "./output/tieba_A_D100_05_only_match/",
+    "init_model": None, #should be set for test
 
     "rand_seed": None, 
 
@@ -44,7 +44,7 @@ conf = {
     "max_turn_len": 30,
 
     "max_to_keep": 1,
-    "num_scan_data": 5,
+    "num_scan_data": 3,
     "_EOS_": 1, #1 for douban data; 28270 for ubuntu
     "final_n_class": 1,
 
@@ -55,11 +55,11 @@ conf = {
 
     "calibration_max_step": 1000000000000,
     "matching_max_step": 1000000000000,
-    "validation_step": 1, #correspond to n
-    "validation_update_batch_percentage": 0.3, #correspond to m
+    "validation_step": 100, #correspond to n
+    "validation_update_batch_percentage": 0.5, #correspond to m
 
     "decay_steps": 1000,
-    "decay_rate": 1.0,
+    "decay_rate": 0.9,
     #cross_entropy / hinge
     "matching_loss_type": 'cross_entropy',
     #"calibration_loss_type": 'hinge',
@@ -68,4 +68,9 @@ conf = {
 }
 
 joint_model = joint_net.Net(conf)
-test.test(conf, joint_model, type='test')
+final_model_save_name = train.train(conf, joint_model)
+conf['init_model'] = final_model_save_name
+print('=' * 60 + '\n' + 'Start Testing' + '\n' + '=' * 60)
+print('Init model ckpt: %s'%final_model_save_name)
+test_joint_model = joint_net.Net(conf)
+test.test(conf, test_joint_model, type='test')
