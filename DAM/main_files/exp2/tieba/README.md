@@ -13,9 +13,9 @@
 8) validation_data_amt 0.2
 9) validation_data_amt 0.1
 
-CUDA_VISIBLE_DEVICES=0,1 nohup python -u 6.9_tieba_A_D100_05_01_08.py > ./log_douban/train_tieba_A_D100_05_01_08_09.log 2>&1&
-CUDA_VISIBLE_DEVICES=2,5 nohup python -u 6.8_tieba_A_D100_05_01_08.py > ./log_douban/train_tieba_A_D100_05_01_08_08.log 2>&1&
-CUDA_VISIBLE_DEVICES=7,6 nohup python -u 6.7_tieba_A_D100_05_01_08.py > ./log_douban/train_tieba_A_D100_05_01_08_07.log 2>&1&
+CUDA_VISIBLE_DEVICES=0 nohup python -u 6.9_tieba_A_D100_05_01_08.py > ./log_douban/train_tieba_A_D100_05_01_08_09.log 2>&1&
+CUDA_VISIBLE_DEVICES=1 nohup python -u 6.8_tieba_A_D100_05_01_08.py > ./log_douban/train_tieba_A_D100_05_01_08_08.log 2>&1&
+CUDA_VISIBLE_DEVICES=2 nohup python -u 6.7_tieba_A_D100_05_01_08.py > ./log_douban/train_tieba_A_D100_05_01_08_07.log 2>&1&
 CUDA_VISIBLE_DEVICES=3 nohup python -u 6.6_tieba_A_D100_05_01_08.py > ./log_douban/train_tieba_A_D100_05_01_08_06.log 2>&1&
 CUDA_VISIBLE_DEVICES=4 nohup python -u 6.5_tieba_A_D100_05_01_08.py > ./log_douban/train_tieba_A_D100_05_01_08_05.log 2>&1&
 CUDA_VISIBLE_DEVICES=0 nohup python -u 6.4_tieba_A_D100_05_01_08.py > ./log_douban/train_tieba_A_D100_05_01_08_04.log 2>&1&
