@@ -57,7 +57,7 @@ conf = {
     "calibration_max_step": 10000000000,
     "matching_max_step": 10000000000,
     "validation_step": 1, #correspond to n
-    "validation_update_batch_percentage": 0.1, #correspond to m
+    "validation_update_batch_percentage": 1, #correspond to m
 
     "decay_steps": 1000,
     "decay_rate": 0.9,
@@ -67,8 +67,8 @@ conf = {
     #"matching_loss_type": 'hinge',
     "calibration_loss_type": 'cross_entropy',
 
-    "positive_sample_threshold": 0.9,
-    "negative_sample_threshold": 0.1,
+    "positive_sample_threshold": 0.5,
+    "negative_sample_threshold": 0.5,
 
     "update_cmodel_epoch_end": True
 }
